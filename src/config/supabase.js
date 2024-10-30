@@ -27,6 +27,8 @@ const supabase = createClient(supabaseUrl, supabaseKey, {
   dangerouslyAllowBrowser: true
 });
 
+console.log('Supabase client initialized with URL:', supabaseUrl);
+
 // Client dengan service role untuk operasi admin
 const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
   auth: {

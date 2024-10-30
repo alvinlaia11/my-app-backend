@@ -9,6 +9,15 @@ const { router: foldersRouter } = require('./routes/folders');
 
 const app = express();
 
+// Tambahkan di awal setelah inisialisasi app
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+});
+
 app.use(express.json());
 app.use(cors({
   origin: [
@@ -39,8 +48,27 @@ app.use(fileUpload({
 }));
 
 // Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+app.get('/health', async (req, res) => {
+  try {
+    // Test Supabase connection
+    const { error } = await supabase.auth.getSession();
+    if (error) {
+      throw error;
+    }
+    
+    res.json({ 
+      status: 'OK', 
+      timestamp: new Date().toISOString(),
+      database: 'Connected'
+    });
+  } catch (error) {
+    console.error('Health check failed:', error);
+    res.status(503).json({
+      status: 'ERROR',
+      timestamp: new Date().toISOString(),
+      error: error.message
+    });
+  }
 });
 
 // Daftarkan routes
