@@ -1,13 +1,13 @@
 {
   "name": "my-app-backend",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "src/server.js",
   "engines": {
     "node": ">=18.0.0"
   },
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js",
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
     "build": "npm install"
   },
   "dependencies": {
