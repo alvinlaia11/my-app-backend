@@ -9,13 +9,22 @@ if (!supabaseUrl || !supabaseKey || !supabaseServiceRoleKey) {
   throw new Error('Supabase credentials missing');
 }
 
-// Client untuk public access
 const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true
-  }
+  },
+  global: {
+    headers: { 'x-application-name': 'kejaksaan-app' },
+  },
+  db: {
+    schema: 'public'
+  },
+  realtime: {
+    timeout: 20000
+  },
+  dangerouslyAllowBrowser: true
 });
 
 // Client dengan service role untuk operasi admin

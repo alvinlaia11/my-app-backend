@@ -58,19 +58,57 @@ router.post('/signup', async (req, res) => {
   try {
     const { email, password } = req.body;
     
-    console.log('Signup attempt:', { email });
-
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password
+    console.log('Signup attempt with Supabase config:', {
+      hasUrl: !!process.env.SUPABASE_URL,
+      hasKey: !!process.env.SUPABASE_ANON_KEY,
+      email
     });
 
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email dan password harus diisi'
+      });
+    }
+
+    try {
+      const { error: pingError } = await supabase.auth.getSession();
+      if (pingError) {
+        console.error('Supabase connection test failed:', pingError);
+        throw new Error('Tidak dapat terhubung ke layanan autentikasi');
+      }
+    } catch (pingError) {
+      console.error('Connection test error:', pingError);
+      return res.status(503).json({
+        success: false,
+        error: 'Layanan autentikasi sedang tidak tersedia'
+      });
+    }
+
+    const signupPromise = supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: process.env.FRONTEND_URL || 'http://localhost:3000'
+      }
+    });
+
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Signup timeout')), 10000)
+    );
+
+    const { data, error } = await Promise.race([signupPromise, timeoutPromise]);
+
     if (error) {
-      console.log('Supabase signup error:', error);
+      console.error('Detailed signup error:', {
+        message: error.message,
+        status: error.status,
+        details: error
+      });
       throw error;
     }
 
-    console.log('Signup success:', { user: data.user });
+    console.log('Signup success:', { userId: data?.user?.id });
 
     res.json({
       success: true,
@@ -79,10 +117,11 @@ router.post('/signup', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Sign up error:', error);
-    res.status(400).json({
+    console.error('Full signup error:', error);
+    res.status(error.status || 500).json({
       success: false,
-      error: error.message
+      error: 'Gagal melakukan pendaftaran: ' + (error.message || 'Unknown error'),
+      details: process.env.NODE_ENV === 'development' ? error : undefined
     });
   }
 });
