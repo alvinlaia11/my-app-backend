@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const fileUpload = require('express-fileupload');
 const path = require('path');
+const { supabase } = require('./config/supabase');
 
 const { router: filesRouter } = require('./routes/files');
 const { router: authRouter } = require('./routes/auth');
@@ -48,27 +49,8 @@ app.use(fileUpload({
 }));
 
 // Health check endpoint
-app.get('/health', async (req, res) => {
-  try {
-    // Test Supabase connection
-    const { error } = await supabase.auth.getSession();
-    if (error) {
-      throw error;
-    }
-    
-    res.json({ 
-      status: 'OK', 
-      timestamp: new Date().toISOString(),
-      database: 'Connected'
-    });
-  } catch (error) {
-    console.error('Health check failed:', error);
-    res.status(503).json({
-      status: 'ERROR',
-      timestamp: new Date().toISOString(),
-      error: error.message
-    });
-  }
+app.get('/health', (req, res) => {
+  res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
 // Daftarkan routes
