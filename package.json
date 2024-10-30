@@ -1,4 +1,11 @@
 {
+  "name": "my-app-backend",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
   "dependencies": {
     "@supabase/supabase-js": "^2.46.0",
     "bcrypt": "^5.1.1",
@@ -12,5 +19,8 @@
     "node-schedule": "^2.1.1",
     "pg": "^8.13.1",
     "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.3"
   }
 }
