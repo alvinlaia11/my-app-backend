@@ -200,7 +200,7 @@ router.get('/users', verifyToken, verifyAdmin, async (req, res) => {
   try {
     console.log('Fetching users with token:', req.headers.authorization);
 
-    // Ambil daftar user dari auth menggunakan supabaseAdmin
+    // Ambil daftar user dari auth
     const { data, error } = await supabaseAdmin.auth.admin.listUsers();
     
     if (error) {
@@ -208,31 +208,17 @@ router.get('/users', verifyToken, verifyAdmin, async (req, res) => {
       throw error;
     }
 
-    // Ambil data dari tabel profiles
-    const { data: profiles, error: profileError } = await supabase
-      .from('profiles')
-      .select('*');
-
-    if (profileError) {
-      console.error('Error fetching profiles:', profileError);
-      throw profileError;
-    }
-
-    // Gabungkan data users dengan profiles
-    const users = data.users.map(user => {
-      const profile = profiles?.find(p => p.id === user.id) || {};
-      return {
-        id: user.id,
-        email: user.email,
-        username: profile.username || user.email,
-        role: user.user_metadata?.role || 'user',
-        created_at: user.created_at,
-        last_sign_in_at: user.last_sign_in_at,
-        position: profile.position,
-        phone: profile.phone,
-        office: profile.office
-      };
-    });
+    // Map user data tanpa profiles
+    const users = data.users.map(user => ({
+      id: user.id,
+      email: user.email,
+      username: user.email,
+      role: user.user_metadata?.role || 'user',
+      created_at: user.created_at,
+      last_sign_in_at: user.last_sign_in_at,
+      position: user.user_metadata?.position,
+      office: user.user_metadata?.office
+    }));
 
     console.log('Sending users data:', users);
 
