@@ -6,8 +6,8 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "start": "NODE_NO_WARNINGS=1 node src/server.js",
-    "dev": "NODE_NO_WARNINGS=1 nodemon src/server.js",
+  "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
     "build": "npm install"
   },
   "dependencies": {

@@ -75,10 +75,14 @@ router.post('/upload', verifyToken, async (req, res) => {
     const userId = req.user.userId;
     const uploadPath = req.body.path || '';
 
+    // Validasi file
+    validateFile(file);
+
     // Proses upload
     const filename = `${Date.now()}-${file.name}`;
     const filePath = `${userId}/${uploadPath}/${filename}`.replace(/\/+/g, '/');
 
+    // Upload ke storage
     const { error: uploadError } = await supabase.storage
       .from('files')
       .upload(filePath, file.data, {
@@ -86,6 +90,25 @@ router.post('/upload', verifyToken, async (req, res) => {
       });
 
     if (uploadError) throw uploadError;
+
+    // Dapatkan URL file
+    const { data: { publicUrl } } = supabase.storage
+      .from('files')
+      .getPublicUrl(filePath);
+
+    // Simpan metadata ke tabel files (tanpa kolom size)
+    const { error: dbError } = await supabase
+      .from('files')
+      .insert({
+        filename: filename,
+        original_name: file.name,
+        path: uploadPath,
+        file_url: publicUrl,
+        mime_type: file.mimetype,
+        user_id: userId
+      });
+
+    if (dbError) throw dbError;
 
     res.json({
       success: true,
@@ -96,7 +119,7 @@ router.post('/upload', verifyToken, async (req, res) => {
     console.error('Upload error:', error);
     res.status(500).json({
       success: false,
-      error: 'Gagal mengupload file'
+      error: 'Gagal mengupload file: ' + error.message
     });
   }
 });
