@@ -6,34 +6,33 @@ const { sendNotification } = require('./notificationService');
 cron.schedule('* * * * *', async () => {
   try {
     const now = new Date();
+    console.log('Checking scheduled notifications at:', now);
     
-    // Ambil notifikasi yang sudah waktunya dikirim
+    // Ambil notifikasi yang belum dikirim dan waktunya sudah tiba
     const { data: notifications, error } = await supabase
       .from('notifications')
       .select('*')
       .eq('is_sent', false)
       .lte('schedule_date', now.toISOString())
-      .eq('type', 'schedule');  // Tambahkan filter untuk tipe schedule
+      .eq('type', 'schedule');
 
-    if (error) throw error;
-    console.log('Found scheduled notifications:', notifications);
+    console.log('Found notifications:', notifications);
 
-    // Kirim notifikasi
     if (notifications?.length > 0) {
       for (const notification of notifications) {
         try {
+          // Kirim notifikasi baru
           await sendNotification(notification.user_id, {
             message: notification.message,
-            type: 'schedule'
+            type: 'reminder'
           });
 
-          // Update status notifikasi
-          const { error: updateError } = await supabase
+          // Update status notifikasi yang dijadwalkan
+          await supabase
             .from('notifications')
             .update({ is_sent: true })
             .eq('id', notification.id);
 
-          if (updateError) throw updateError;
         } catch (error) {
           console.error('Error processing notification:', error);
         }
