@@ -66,4 +66,70 @@ router.post('/create', async (req, res) => {
   }
 });
 
+// DELETE /api/folders/:id
+router.delete('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.userId;
+
+    console.log('Attempting to delete folder:', { folderId: id, userId });
+
+    // Cek folder exists
+    const { data: folder, error: fetchError } = await supabase
+      .from('folders')
+      .select('*')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching folder:', fetchError);
+      throw fetchError;
+    }
+
+    if (!folder) {
+      return res.status(404).json({
+        success: false,
+        error: 'Folder tidak ditemukan'
+      });
+    }
+
+    // Hapus semua file dalam folder
+    const { error: filesError } = await supabase
+      .from('files')
+      .delete()
+      .eq('folder_id', id)
+      .eq('user_id', userId);
+
+    if (filesError) {
+      console.error('Error deleting files:', filesError);
+      throw filesError;
+    }
+
+    // Hapus folder
+    const { error: deleteError } = await supabase
+      .from('folders')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId);
+
+    if (deleteError) {
+      console.error('Error deleting folder:', deleteError);
+      throw deleteError;
+    }
+
+    res.json({
+      success: true,
+      message: 'Folder berhasil dihapus'
+    });
+
+  } catch (error) {
+    console.error('Delete folder error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Gagal menghapus folder: ' + error.message
+    });
+  }
+});
+
 module.exports = { router };
