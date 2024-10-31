@@ -176,11 +176,8 @@ router.get('/users', verifyToken, verifyAdmin, async (req, res) => {
     const users = data.users.map(user => ({
       id: user.id,
       email: user.email,
-      username: user.user_metadata?.username || user.email,
-      status: user.status,
-      position: user.user_metadata?.position,
-      phone: user.user_metadata?.phone,
-      office: user.user_metadata?.office
+      user_metadata: user.user_metadata || {},
+      status: user.status || 'active'
     }));
 
     res.json({
