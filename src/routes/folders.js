@@ -74,31 +74,32 @@ router.delete('/:id', async (req, res) => {
 
     console.log('Attempting to delete folder:', { folderId: id, userId });
 
-    // Cek folder exists
-    const { data: folder, error: fetchError } = await supabase
+    // Cek folder exists dengan error handling yang lebih baik
+    const { data: folders, error: fetchError } = await supabase
       .from('folders')
       .select('*')
       .eq('id', id)
-      .eq('user_id', userId)
-      .single();
+      .eq('user_id', userId);
 
     if (fetchError) {
       console.error('Error fetching folder:', fetchError);
       throw fetchError;
     }
 
-    if (!folder) {
+    if (!folders || folders.length === 0) {
       return res.status(404).json({
         success: false,
         error: 'Folder tidak ditemukan'
       });
     }
 
+    const folder = folders[0];
+
     // Hapus semua file dalam folder
     const { error: filesError } = await supabase
       .from('files')
       .delete()
-      .eq('folder_id', id)
+      .eq('path', folder.path + '/' + folder.name)
       .eq('user_id', userId);
 
     if (filesError) {
