@@ -54,7 +54,7 @@ router.post('/signin', async (req, res) => {
   }
 });
 
-// POST /api/auth/signup 
+// POST /api/auth/signup
 router.post('/signup', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -111,6 +111,23 @@ router.post('/signup', async (req, res) => {
 
     console.log('Signup success:', { userId: data?.user?.id });
 
+    // Buat profil user
+    const { error: profileError } = await supabase
+      .from('user_profiles')
+      .insert({
+        user_id: data.user.id,
+        email: data.user.email,
+        username: email.split('@')[0], // Default username dari email
+        role: 'user'
+      });
+
+    if (profileError) {
+      console.error('Error creating profile:', profileError);
+      // Rollback user creation jika gagal membuat profil
+      await supabaseAdmin.auth.admin.deleteUser(data.user.id);
+      throw new Error('Gagal membuat profil user');
+    }
+
     res.json({
       success: true,
       session: data.session,
@@ -118,11 +135,10 @@ router.post('/signup', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Full signup error:', error);
-    res.status(error.status || 500).json({
+    console.error('Signup error:', error);
+    res.status(500).json({
       success: false,
-      error: 'Gagal melakukan pendaftaran: ' + (error.message || 'Unknown error'),
-      details: process.env.NODE_ENV === 'development' ? error : undefined
+      error: 'Gagal melakukan pendaftaran: ' + error.message
     });
   }
 });
