@@ -17,12 +17,10 @@ const initializeScheduler = () => {
         .from('notifications')
         .select('*')
         .eq('is_sent', false)
-        .eq('type', 'schedule')
         .lte('schedule_date', now.toISOString());
 
       console.log('Query params:', {
         is_sent: false,
-        type: 'schedule',
         schedule_date_lte: now.toISOString()
       });
 

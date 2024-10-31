@@ -29,7 +29,6 @@ const createScheduledNotification = async (userId, message, scheduleDate) => {
       .insert([{
         user_id: userId,
         message: message,
-        type: 'schedule',
         is_read: false,
         is_sent: false,
         schedule_date: scheduleDate,
