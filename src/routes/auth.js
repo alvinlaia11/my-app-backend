@@ -198,19 +198,32 @@ router.post('/verify', async (req, res) => {
 // GET /api/auth/users
 router.get('/users', verifyToken, verifyAdmin, async (req, res) => {
   try {
-    const { data: { users }, error } = await supabaseAdmin.auth.admin.listUsers();
+    const { data: { users }, error } = await supabase.auth.admin.listUsers();
     
     if (error) throw error;
 
-    res.json({
-      success: true,
-      users: users.map(user => ({
+    // Ambil data tambahan dari profiles
+    const { data: profiles, error: profileError } = await supabase
+      .from('profiles')
+      .select('*');
+
+    if (profileError) throw profileError;
+
+    // Gabungkan data
+    const enrichedUsers = users.map(user => {
+      const profile = profiles.find(p => p.id === user.id) || {};
+      return {
         id: user.id,
         email: user.email,
-        username: user.user_metadata?.username || user.email,
+        username: profile.username || user.email,
         role: user.user_metadata?.role || 'user',
         created_at: user.created_at
-      }))
+      };
+    });
+
+    res.json({
+      success: true,
+      users: enrichedUsers
     });
 
   } catch (error) {
