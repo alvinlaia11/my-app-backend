@@ -5,7 +5,7 @@ const path = require('path');
 const { supabase } = require('./config/supabase');
 
 const { router: filesRouter } = require('./routes/files');
-const { router: authRouter } = require('./routes/auth');
+const authRouter = require('./routes/auth');
 const { router: foldersRouter } = require('./routes/folders');
 
 const app = express();
@@ -24,9 +24,9 @@ app.use(cors({
   origin: [
     "http://localhost:3000",
     "http://localhost:3002",
+    "https://my-app-frontend-production.up.railway.app",
     "https://my-app-backend-production-15df.up.railway.app",
-    "https://my-app-backend-production-ad9e.up.railway.app",
-    "*"
+    "https://my-app-backend-production-ad9e.up.railway.app"
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -89,9 +89,9 @@ app.listen(PORT, () => {
   console.log('CORS enabled for origins:', [
     "http://localhost:3000",
     "http://localhost:3002",
+    "https://my-app-frontend-production.up.railway.app",
     "https://my-app-backend-production-15df.up.railway.app",
-    "https://my-app-backend-production-ad9e.up.railway.app",
-    "*"
+    "https://my-app-backend-production-ad9e.up.railway.app"
   ]);
   console.log('Environment:', process.env.NODE_ENV);
 });

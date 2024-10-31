@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { supabase } = require('../config/supabase');
+const { supabase, supabaseAdmin } = require('../config/supabase');
+const { verifyToken, verifyAdmin } = require('../middleware/auth');
 
 // POST /api/auth/signin
 router.post('/signin', async (req, res) => {
@@ -126,9 +127,86 @@ router.post('/signup', async (req, res) => {
   }
 });
 
+// POST /api/auth/create-user
+router.post('/create-user', verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const { email, password, username } = req.body;
+    
+    if (!email || !password || !username) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email, password, dan username harus diisi'
+      });
+    }
+
+    const { data, error } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: {
+        username,
+        role: 'user'
+      }
+    });
+
+    if (error) throw error;
+
+    const { error: profileError } = await supabaseAdmin
+      .from('user_profiles')
+      .insert({
+        user_id: data.user.id,
+        username,
+        email,
+        created_at: new Date().toISOString()
+      });
+
+    if (profileError) throw profileError;
+
+    res.json({
+      success: true,
+      message: 'User berhasil dibuat',
+      user: data.user
+    });
+
+  } catch (error) {
+    console.error('Create user error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Gagal membuat user: ' + error.message
+    });
+  }
+});
+
 // Endpoint verifikasi yang sudah ada
 router.post('/verify', async (req, res) => {
   // ... kode yang sudah ada
 });
 
-module.exports = { router };
+// GET /api/auth/users
+router.get('/users', verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const { data: { users }, error } = await supabaseAdmin.auth.admin.listUsers();
+    
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      users: users.map(user => ({
+        id: user.id,
+        email: user.email,
+        username: user.user_metadata?.username || user.email,
+        role: user.user_metadata?.role || 'user',
+        created_at: user.created_at
+      }))
+    });
+
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Gagal mengambil daftar user: ' + error.message
+    });
+  }
+});
+
+module.exports = router;

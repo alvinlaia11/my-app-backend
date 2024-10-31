@@ -2,6 +2,7 @@ const { supabase } = require('../config/supabase');
 
 const verifyToken = async (req, res, next) => {
   try {
+    console.log('Request headers:', req.headers);
     const authHeader = req.headers.authorization;
     console.log('Auth header:', authHeader);
 
