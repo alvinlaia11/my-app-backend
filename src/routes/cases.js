@@ -120,4 +120,42 @@ router.delete('/:id', verifyToken, async (req, res) => {
   }
 });
 
+// POST /api/cases - Tambah kasus baru
+router.post('/', verifyToken, async (req, res) => {
+  try {
+    const { title, date, description, parties, type, status } = req.body;
+    const userId = req.user.userId;
+
+    const { data, error } = await supabase
+      .from('cases')
+      .insert([
+        { 
+          title,
+          date,
+          description,
+          parties,
+          type,
+          status,
+          user_id: userId
+        }
+      ])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      data: data
+    });
+
+  } catch (error) {
+    console.error('Error creating case:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Gagal menambahkan kasus'
+    });
+  }
+});
+
 module.exports = router;
