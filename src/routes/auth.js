@@ -139,7 +139,17 @@ router.post('/create-user', verifyToken, verifyAdmin, async (req, res) => {
       });
     }
 
-    const { data, error } = await supabaseAdmin.auth.admin.createUser({
+    // Cek apakah email sudah terdaftar
+    const { data: existingUser } = await supabaseAdmin.auth.admin.listUsers();
+    if (existingUser?.users?.some(user => user.email === email)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email sudah terdaftar'
+      });
+    }
+
+    // Buat user baru menggunakan supabaseAdmin
+    const { data: { user }, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
@@ -149,15 +159,15 @@ router.post('/create-user', verifyToken, verifyAdmin, async (req, res) => {
       }
     });
 
-    if (error) throw error;
+    if (createError) throw createError;
 
-    const { error: profileError } = await supabaseAdmin
+    // Tambahkan data ke tabel user_profiles
+    const { error: profileError } = await supabase
       .from('user_profiles')
       .insert({
-        user_id: data.user.id,
+        user_id: user.id,
         username,
-        email,
-        created_at: new Date().toISOString()
+        email
       });
 
     if (profileError) throw profileError;
@@ -165,7 +175,12 @@ router.post('/create-user', verifyToken, verifyAdmin, async (req, res) => {
     res.json({
       success: true,
       message: 'User berhasil dibuat',
-      user: data.user
+      user: {
+        id: user.id,
+        email: user.email,
+        username,
+        role: user.user_metadata?.role || 'user'
+      }
     });
 
   } catch (error) {
