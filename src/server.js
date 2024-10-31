@@ -1,4 +1,6 @@
 const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
 const cors = require('cors');
 const fileUpload = require('express-fileupload');
 const path = require('path');
@@ -12,6 +14,27 @@ const notificationsRouter = require('./routes/notifications');
 const userRouter = require('./routes/user');
 
 const app = express();
+const server = http.createServer(app);
+
+const io = new Server(server, {
+  cors: {
+    origin: [
+      "http://localhost:3000",
+      "http://localhost:3002",
+      "https://my-app-frontend-production.up.railway.app"
+    ],
+    methods: ["GET", "POST"],
+    credentials: true
+  }
+});
+
+io.on('connection', (socket) => {
+  console.log('Client connected:', socket.id);
+  
+  socket.on('disconnect', () => {
+    console.log('Client disconnected:', socket.id);
+  });
+});
 
 // Tambahkan di awal setelah inisialisasi app
 process.on('unhandledRejection', (reason, promise) => {
@@ -90,14 +113,6 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server berjalan di port ${PORT}`);
-  console.log('CORS enabled for origins:', [
-    "http://localhost:3000",
-    "http://localhost:3002",
-    "https://my-app-frontend-production.up.railway.app",
-    "https://my-app-backend-production-15df.up.railway.app",
-    "https://my-app-backend-production-ad9e.up.railway.app"
-  ]);
-  console.log('Environment:', process.env.NODE_ENV);
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
