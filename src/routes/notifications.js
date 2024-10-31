@@ -36,16 +36,15 @@ router.get('/unread', verifyToken, async (req, res) => {
     
     const { data, error } = await supabase
       .from('notifications')
-      .select('count')
+      .select('*', { count: 'exact' })
       .eq('user_id', userId)
-      .eq('is_read', false)
-      .single();
+      .eq('is_read', false);
 
     if (error) throw error;
 
     res.json({
       success: true,
-      count: data?.count || 0
+      count: data.length
     });
 
   } catch (error) {

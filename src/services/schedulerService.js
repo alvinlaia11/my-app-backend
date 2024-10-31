@@ -6,51 +6,49 @@ const initializeScheduler = () => {
   console.log('Starting notification scheduler...');
   
   cron.schedule('* * * * *', async () => {
-    const timestamp = new Date().toISOString();
-    console.log(`[${timestamp}] Running notification check...`);
-    
     try {
       const now = new Date();
+      console.log('Checking notifications at:', now.toISOString());
       
-      // Log timezone untuk debugging
-      console.log('Server timezone:', Intl.DateTimeFormat().resolvedOptions().timeZone);
-      console.log('Current time:', now.toISOString());
-      
+      // Ambil notifikasi yang belum dikirim
       const { data: notifications, error } = await supabase
         .from('notifications')
         .select('*')
         .eq('is_sent', false)
-        .lte('schedule_date', now.toISOString())
-        .eq('type', 'schedule');
+        .eq('type', 'schedule')
+        .lte('schedule_date', now.toISOString());
 
-      console.log('Query result:', { notifications, error });
+      if (error) {
+        console.error('Error fetching notifications:', error);
+        return;
+      }
+
+      console.log('Found notifications:', notifications);
 
       if (notifications?.length > 0) {
-        console.log(`Found ${notifications.length} notifications to process`);
-        
         for (const notification of notifications) {
-          console.log('Processing notification:', notification);
-          
           try {
-            await sendNotification(notification.user_id, {
+            // Kirim notifikasi baru
+            const newNotif = await sendNotification(notification.user_id, {
               message: notification.message,
               type: 'reminder'
             });
             
-            console.log('Notification sent successfully');
+            console.log('New notification created:', newNotif);
 
-            await supabase
+            // Update status notifikasi lama
+            const { error: updateError } = await supabase
               .from('notifications')
               .update({ is_sent: true })
               .eq('id', notification.id);
-              
-            console.log('Notification marked as sent');
+
+            if (updateError) {
+              console.error('Error updating notification:', updateError);
+            }
           } catch (error) {
             console.error('Error processing notification:', error);
           }
         }
-      } else {
-        console.log('No notifications to process');
       }
     } catch (error) {
       console.error('Scheduler error:', error);
