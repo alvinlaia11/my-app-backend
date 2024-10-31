@@ -130,26 +130,54 @@ router.post('/signup', async (req, res) => {
 // POST /api/auth/create-user
 router.post('/create-user', verifyToken, verifyAdmin, async (req, res) => {
   try {
-    const { email, password, username, position, phone, office } = req.body;
+    const { email, password, username } = req.body;
     
-    const { data: { user }, error } = await supabaseAdmin.auth.admin.createUser({
+    if (!email || !password || !username) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email, password, dan username harus diisi'
+      });
+    }
+
+    // Buat user baru menggunakan supabaseAdmin
+    const { data: { user }, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
       user_metadata: {
         username,
-        position,
-        phone,
-        office,
         role: 'user'
       }
     });
 
-    if (error) throw error;
+    if (createError) throw createError;
+
+    // Buat profil user
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .insert({
+        id: user.id,
+        username,
+        email,
+        role: 'user',
+        created_at: new Date().toISOString()
+      });
+
+    if (profileError) {
+      // Rollback - hapus user jika gagal membuat profil
+      await supabaseAdmin.auth.admin.deleteUser(user.id);
+      throw profileError;
+    }
 
     res.json({
       success: true,
-      user
+      message: 'User berhasil dibuat',
+      user: {
+        id: user.id,
+        email: user.email,
+        username: user.user_metadata.username,
+        role: user.user_metadata.role
+      }
     });
 
   } catch (error) {
