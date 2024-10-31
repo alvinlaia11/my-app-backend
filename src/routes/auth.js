@@ -307,25 +307,27 @@ router.delete('/users/:id', verifyToken, verifyAdmin, async (req, res) => {
 router.get('/profile', verifyToken, async (req, res) => {
   try {
     const userId = req.user.userId;
+    console.log('Fetching profile for user:', userId);
 
-    // Ambil data profil dari tabel user_profiles
+    // Cek dan buat profil jika belum ada
     const { data: profile, error } = await supabase
       .from('user_profiles')
       .select('*')
       .eq('user_id', userId)
-      .maybeSingle(); // Gunakan maybeSingle() daripada single()
+      .maybeSingle();
 
-    if (error) throw error;
+    if (error && error.code !== 'PGRST116') {
+      throw error;
+    }
 
-    // Jika profil belum ada, buat profil baru
     if (!profile) {
       const { data: newProfile, error: createError } = await supabase
         .from('user_profiles')
-        .insert({
+        .upsert({
           user_id: userId,
           email: req.user.email,
           username: req.user.email.split('@')[0],
-          role: req.user.role
+          role: req.user.role || 'user'
         })
         .select()
         .single();
@@ -344,7 +346,7 @@ router.get('/profile', verifyToken, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error fetching profile:', error);
+    console.error('Error in profile endpoint:', error);
     res.status(500).json({
       success: false,
       error: 'Gagal mengambil profil: ' + error.message
