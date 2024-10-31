@@ -224,18 +224,17 @@ router.put('/users/:id', verifyToken, verifyAdmin, async (req, res) => {
     const { id } = req.params;
     const { email, password, username, position, phone, office } = req.body;
     
-    // Update user dengan supabaseAdmin
     const updateData = {
       email,
       user_metadata: {
         username,
         position,
         phone,
-        office
+        office,
+        role: 'user'
       }
     };
 
-    // Tambahkan password jika ada
     if (password) {
       updateData.password = password;
     }
@@ -266,7 +265,7 @@ router.delete('/users/:id', verifyToken, verifyAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     
-    const { data: { user }, error } = await supabaseAdmin.auth.admin.deleteUser(id);
+    const { error } = await supabaseAdmin.auth.admin.deleteUser(id);
 
     if (error) throw error;
 
@@ -278,7 +277,7 @@ router.delete('/users/:id', verifyToken, verifyAdmin, async (req, res) => {
   } catch (error) {
     console.error('Delete user error:', error);
     res.status(500).json({
-      success: false,
+      success: false, 
       error: 'Gagal menghapus user: ' + error.message
     });
   }
