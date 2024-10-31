@@ -3,35 +3,57 @@ const { supabase } = require('../config/supabase');
 const { sendNotification } = require('./notificationService');
 
 const initializeScheduler = () => {
-  console.log('Starting notification scheduler...');
-  
-  console.log('Scheduler initialized at:', new Date().toISOString());
-  
-  cron.schedule('* * * * *', async () => {
+  console.log('Starting scheduler with config:', {
+    timezone: process.env.TZ,
+    currentTime: new Date().toISOString()
+  });
+
+  // Jalankan pengecekan setiap 30 detik
+  cron.schedule('*/30 * * * * *', async () => {
+    const now = new Date();
+    console.log('\n=== Scheduler Check ===');
+    console.log('Time:', now.toISOString());
+    
     try {
-      const now = new Date();
-      console.log('\n--- Scheduler Check ---');
-      console.log('Running check at:', now.toISOString());
-      
-      // Ambil notifikasi yang belum dikirim
+      // Cek koneksi Supabase
+      const { data: testData, error: testError } = await supabase
+        .from('notifications')
+        .select('count')
+        .limit(1);
+        
+      console.log('Database connection test:', testError ? 'Failed' : 'Success');
+
+      // Ambil notifikasi
       const { data: notifications, error } = await supabase
         .from('notifications')
         .select('*')
         .eq('is_sent', false)
         .lte('schedule_date', now.toISOString());
 
-      if (error) {
-        console.error('Error fetching notifications:', error);
-        return;
-      }
+      if (error) throw error;
 
-      console.log(`Found ${notifications?.length || 0} notifications to process`);
-      
+      console.log(`Found ${notifications?.length || 0} pending notifications`);
+      console.log('Notifications:', notifications);
+
+      // Proses notifikasi
       if (notifications?.length > 0) {
-        console.log('Notifications:', notifications);
+        for (const notif of notifications) {
+          console.log(`Processing notification ID: ${notif.id}`);
+          await sendNotification(notif.user_id, {
+            message: notif.message,
+            type: 'reminder'
+          });
+          console.log('Notification sent');
+          
+          await supabase
+            .from('notifications')
+            .update({ is_sent: true })
+            .eq('id', notif.id);
+          console.log('Notification marked as sent');
+        }
       }
-    } catch (error) {
-      console.error('Scheduler error:', error);
+    } catch (err) {
+      console.error('Scheduler error:', err);
     }
   });
 };

@@ -110,4 +110,50 @@ router.put('/read/:id', verifyToken, async (req, res) => {
   }
 });
 
+router.post('/test-scheduler', verifyToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const now = new Date();
+    const testDate = new Date(now.getTime() + 1 * 60000); // 1 menit dari sekarang
+    
+    const notification = await createScheduledNotification(
+      userId,
+      "Test notification - akan muncul dalam 1 menit",
+      testDate.toISOString()
+    );
+
+    res.json({
+      success: true,
+      message: 'Test notification created',
+      data: notification
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create test notification'
+    });
+  }
+});
+
+router.get('/test-connection', verifyToken, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('count')
+      .limit(1);
+      
+    res.json({
+      success: true,
+      dbConnection: error ? 'Failed' : 'Success',
+      scheduler: 'Running',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Connection test failed'
+    });
+  }
+});
+
 module.exports = router; 
