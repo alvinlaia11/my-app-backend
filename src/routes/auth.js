@@ -198,12 +198,14 @@ router.post('/verify', async (req, res) => {
 // GET /api/auth/users
 router.get('/users', verifyToken, verifyAdmin, async (req, res) => {
   try {
+    console.log('Fetching users with token:', req.headers.authorization);
+
     // Ambil daftar user dari auth
-    const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers();
     
-    if (authError) {
-      console.error('Error listing users:', authError);
-      throw authError;
+    if (error) {
+      console.error('Error listing users:', error);
+      throw error;
     }
 
     // Ambil data dari tabel profiles
@@ -216,26 +218,28 @@ router.get('/users', verifyToken, verifyAdmin, async (req, res) => {
       throw profileError;
     }
 
-    // Gabungkan data
-    const users = authData.users.map(user => {
+    // Gabungkan data users dengan profiles
+    const users = data.users.map(user => {
       const profile = profiles?.find(p => p.id === user.id) || {};
       return {
         id: user.id,
         email: user.email,
         username: profile.username || user.email,
-        status: user.confirmed_at ? 'Aktif' : 'Pending',
         role: user.user_metadata?.role || 'user',
-        created_at: user.created_at
+        created_at: user.created_at,
+        last_sign_in_at: user.last_sign_in_at
       };
     });
 
+    console.log('Sending users data:', users);
+
     res.json({
       success: true,
-      users: users
+      users
     });
 
   } catch (error) {
-    console.error('Error fetching users:', error);
+    console.error('Error in GET /users:', error);
     res.status(500).json({
       success: false,
       error: 'Gagal mengambil daftar user: ' + error.message
