@@ -1,4 +1,5 @@
 const { supabase } = require('../config/supabase');
+const moment = require('moment-timezone');
 
 const sendNotification = async (userId, notification) => {
   try {
@@ -24,8 +25,9 @@ const sendNotification = async (userId, notification) => {
 
 const createScheduledNotification = async (userId, message, scheduleDate) => {
   try {
-    const scheduleDateObj = new Date(scheduleDate);
-    if (isNaN(scheduleDateObj.getTime())) {
+    const scheduleMoment = moment(scheduleDate).tz('Asia/Jakarta');
+    
+    if (!scheduleMoment.isValid()) {
       throw new Error('Invalid schedule date');
     }
 
@@ -36,8 +38,8 @@ const createScheduledNotification = async (userId, message, scheduleDate) => {
         message: message,
         is_read: false,
         is_sent: false,
-        schedule_date: scheduleDateObj.toISOString(),
-        created_at: new Date().toISOString()
+        schedule_date: scheduleMoment.toDate().toISOString(),
+        created_at: moment().tz('Asia/Jakarta').toDate().toISOString()
       }])
       .select()
       .single();
