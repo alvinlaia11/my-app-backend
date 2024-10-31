@@ -119,14 +119,11 @@ router.post('/signup', async (req, res) => {
         user_id: data.user.id,
         email: data.user.email,
         username: email.split('@')[0],
-        role: 'user',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        role: 'user'
       });
 
     if (profileError) {
       console.error('Error creating profile:', profileError);
-      // Rollback user creation jika gagal membuat profil
       await supabaseAdmin.auth.admin.deleteUser(data.user.id);
       throw new Error('Gagal membuat profil user: ' + profileError.message);
     }
