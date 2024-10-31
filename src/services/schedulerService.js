@@ -5,12 +5,13 @@ const { sendNotification } = require('./notificationService');
 const initializeScheduler = () => {
   console.log('Starting notification scheduler...');
   
+  console.log('Scheduler initialized at:', new Date().toISOString());
+  
   cron.schedule('* * * * *', async () => {
     try {
       const now = new Date();
-      console.log('Current server time:', now);
-      console.log('Server timezone:', process.env.TZ || Intl.DateTimeFormat().resolvedOptions().timeZone);
-      console.log('ISO time:', now.toISOString());
+      console.log('\n--- Scheduler Check ---');
+      console.log('Running check at:', now.toISOString());
       
       // Ambil notifikasi yang belum dikirim
       const { data: notifications, error } = await supabase
@@ -19,42 +20,15 @@ const initializeScheduler = () => {
         .eq('is_sent', false)
         .lte('schedule_date', now.toISOString());
 
-      console.log('Query params:', {
-        is_sent: false,
-        schedule_date_lte: now.toISOString()
-      });
-
       if (error) {
         console.error('Error fetching notifications:', error);
         return;
       }
 
-      console.log('Found notifications:', notifications);
-
+      console.log(`Found ${notifications?.length || 0} notifications to process`);
+      
       if (notifications?.length > 0) {
-        for (const notification of notifications) {
-          try {
-            // Kirim notifikasi baru
-            const newNotif = await sendNotification(notification.user_id, {
-              message: notification.message,
-              type: 'reminder'
-            });
-            
-            console.log('New notification created:', newNotif);
-
-            // Update status notifikasi lama
-            const { error: updateError } = await supabase
-              .from('notifications')
-              .update({ is_sent: true })
-              .eq('id', notification.id);
-
-            if (updateError) {
-              console.error('Error updating notification:', updateError);
-            }
-          } catch (error) {
-            console.error('Error processing notification:', error);
-          }
-        }
+        console.log('Notifications:', notifications);
       }
     } catch (error) {
       console.error('Scheduler error:', error);

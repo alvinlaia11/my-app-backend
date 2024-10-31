@@ -84,12 +84,14 @@ app.use((err, req, res, next) => {
   });
 });
 
+// Di bagian atas file setelah imports
+process.env.TZ = 'Asia/Jakarta';
+console.log('Server timezone set to:', process.env.TZ);
+
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log('Initializing scheduler...');
   initializeScheduler();
-  console.log('Scheduler initialized');
+  console.log('Server startup complete');
 });
-
-// Di bagian atas file, setelah imports
-process.env.TZ = 'Asia/Jakarta';

@@ -24,6 +24,12 @@ const sendNotification = async (userId, notification) => {
 
 const createScheduledNotification = async (userId, message, scheduleDate) => {
   try {
+    console.log('Creating scheduled notification:', {
+      userId,
+      message,
+      scheduleDate
+    });
+
     const { data, error } = await supabase
       .from('notifications')
       .insert([{
@@ -37,7 +43,12 @@ const createScheduledNotification = async (userId, message, scheduleDate) => {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Database error:', error);
+      throw error;
+    }
+
+    console.log('Notification created:', data);
     return data;
   } catch (error) {
     console.error('Error creating scheduled notification:', error);
