@@ -50,7 +50,21 @@ app.use(fileUpload({
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+  try {
+    res.json({ 
+      status: 'OK', 
+      timestamp: new Date().toISOString(),
+      env: process.env.NODE_ENV,
+      port: process.env.PORT,
+      supabase_url: process.env.SUPABASE_URL
+    });
+  } catch (error) {
+    console.error('Health check error:', error);
+    res.status(500).json({
+      status: 'ERROR',
+      error: error.message
+    });
+  }
 });
 
 // Daftarkan routes
@@ -71,5 +85,6 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server berjalan di port ${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log('CORS enabled for origins:', app.get('cors').origin);
+  console.log('Environment:', process.env.NODE_ENV);
 });

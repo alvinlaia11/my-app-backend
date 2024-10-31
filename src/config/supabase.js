@@ -28,6 +28,11 @@ const supabase = createClient(supabaseUrl, supabaseKey, {
 });
 
 console.log('Supabase client initialized with URL:', supabaseUrl);
+console.log('Environment variables loaded:', {
+  SUPABASE_URL: process.env.SUPABASE_URL ? 'Set' : 'Not set',
+  SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY ? 'Set' : 'Not set',
+  SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ? 'Set' : 'Not set'
+});
 
 // Client dengan service role untuk operasi admin
 const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
