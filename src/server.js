@@ -7,6 +7,8 @@ const { supabase } = require('./config/supabase');
 const { router: filesRouter } = require('./routes/files');
 const authRouter = require('./routes/auth');
 const { router: foldersRouter } = require('./routes/folders');
+const casesRouter = require('./routes/cases');
+const notificationsRouter = require('./routes/notifications');
 
 const app = express();
 
@@ -72,6 +74,8 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRouter);
 app.use('/api/files', filesRouter);
 app.use('/api/folders', foldersRouter);
+app.use('/api/cases', casesRouter);
+app.use('/api/notifications', notificationsRouter);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
