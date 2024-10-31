@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { supabase, supabaseAdmin } = require('../config/supabase');
 const { verifyToken, verifyAdmin } = require('../middleware/auth');
+const crypto = require('crypto');
 
 // POST /api/auth/signin
 router.post('/signin', async (req, res) => {
@@ -309,7 +310,6 @@ router.get('/profile', verifyToken, async (req, res) => {
     const userId = req.user.userId;
     console.log('Fetching profile for user:', userId);
 
-    // Gunakan supabaseAdmin untuk bypass RLS
     const { data: profile, error } = await supabaseAdmin
       .from('user_profiles')
       .select('*')
@@ -321,11 +321,12 @@ router.get('/profile', verifyToken, async (req, res) => {
       throw error;
     }
 
-    // Jika profil belum ada, buat profil baru
     if (!profile) {
+      console.log('Creating new profile for user:', userId);
       const { data: newProfile, error: createError } = await supabaseAdmin
         .from('user_profiles')
         .insert({
+          id: crypto.randomUUID(),
           user_id: userId,
           email: req.user.email,
           username: req.user.email.split('@')[0],
@@ -334,7 +335,10 @@ router.get('/profile', verifyToken, async (req, res) => {
         .select()
         .single();
 
-      if (createError) throw createError;
+      if (createError) {
+        console.error('Error creating profile:', createError);
+        throw createError;
+      }
 
       return res.json({
         success: true,
