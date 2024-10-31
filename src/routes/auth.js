@@ -112,12 +112,12 @@ router.post('/signup', async (req, res) => {
     console.log('Signup success:', { userId: data?.user?.id });
 
     // Buat profil user
-    const { error: profileError } = await supabase
+    const { error: profileError } = await supabaseAdmin
       .from('user_profiles')
       .insert({
         user_id: data.user.id,
         email: data.user.email,
-        username: email.split('@')[0], // Default username dari email
+        username: email.split('@')[0],
         role: 'user'
       });
 
