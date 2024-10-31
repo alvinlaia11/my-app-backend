@@ -83,4 +83,32 @@ router.post('/schedule', verifyToken, async (req, res) => {
   }
 });
 
+router.put('/read/:id', verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.userId;
+
+    const { data, error } = await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      data
+    });
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Gagal mengupdate status notifikasi'
+    });
+  }
+});
+
 module.exports = router; 

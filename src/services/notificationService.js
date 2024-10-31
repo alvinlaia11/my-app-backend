@@ -31,6 +31,7 @@ const createScheduledNotification = async (userId, message, scheduleDate) => {
         message: message,
         type: 'schedule',
         is_read: false,
+        is_sent: false,
         schedule_date: scheduleDate,
         created_at: new Date().toISOString()
       }])

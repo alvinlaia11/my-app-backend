@@ -26,7 +26,8 @@ app.use(cors({
     "https://my-app-backend-production-ad9e.up.railway.app"
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Authorization'],
   credentials: true
 }));
 
