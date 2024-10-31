@@ -130,33 +130,22 @@ router.post('/signup', async (req, res) => {
 // POST /api/auth/create-user
 router.post('/create-user', verifyToken, verifyAdmin, async (req, res) => {
   try {
-    const { email, password, username } = req.body;
+    const { email, password, username, position, phone, office } = req.body;
     
-    // Validasi input
-    if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        error: 'Email dan password harus diisi'
-      });
-    }
-
-    // Gunakan supabaseAdmin untuk membuat user
     const { data: { user }, error } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
       user_metadata: {
         username,
+        position,
+        phone,
+        office,
         role: 'user'
       }
     });
 
-    if (error) {
-      console.error('Create user error:', error);
-      throw error;
-    }
-
-    console.log('User created successfully:', user);
+    if (error) throw error;
 
     res.json({
       success: true,
@@ -165,7 +154,7 @@ router.post('/create-user', verifyToken, verifyAdmin, async (req, res) => {
 
   } catch (error) {
     console.error('Create user error:', error);
-    res.status(error.status || 500).json({
+    res.status(500).json({
       success: false,
       error: 'Gagal membuat user: ' + error.message
     });
@@ -180,29 +169,19 @@ router.post('/verify', async (req, res) => {
 // GET /api/auth/users
 router.get('/users', verifyToken, verifyAdmin, async (req, res) => {
   try {
-    console.log('Fetching users with token:', req.headers.authorization);
-
-    // Ambil daftar user dari auth
     const { data, error } = await supabaseAdmin.auth.admin.listUsers();
     
-    if (error) {
-      console.error('Error listing users:', error);
-      throw error;
-    }
+    if (error) throw error;
 
-    // Map user data tanpa profiles
     const users = data.users.map(user => ({
       id: user.id,
       email: user.email,
-      username: user.email,
-      role: user.user_metadata?.role || 'user',
-      created_at: user.created_at,
-      last_sign_in_at: user.last_sign_in_at,
+      username: user.user_metadata?.username || user.email,
+      status: user.status,
       position: user.user_metadata?.position,
+      phone: user.user_metadata?.phone,
       office: user.user_metadata?.office
     }));
-
-    console.log('Sending users data:', users);
 
     res.json({
       success: true,
