@@ -218,4 +218,70 @@ router.get('/users', verifyToken, verifyAdmin, async (req, res) => {
   }
 });
 
+// PUT /api/auth/users/:id
+router.put('/users/:id', verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { email, password, username, position, phone, office } = req.body;
+    
+    // Update user dengan supabaseAdmin
+    const updateData = {
+      email,
+      user_metadata: {
+        username,
+        position,
+        phone,
+        office
+      }
+    };
+
+    // Tambahkan password jika ada
+    if (password) {
+      updateData.password = password;
+    }
+
+    const { data: { user }, error } = await supabaseAdmin.auth.admin.updateUserById(
+      id,
+      updateData
+    );
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      user
+    });
+
+  } catch (error) {
+    console.error('Update user error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Gagal mengupdate user: ' + error.message
+    });
+  }
+});
+
+// DELETE /api/auth/users/:id
+router.delete('/users/:id', verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const { data: { user }, error } = await supabaseAdmin.auth.admin.deleteUser(id);
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      message: 'User berhasil dihapus'
+    });
+
+  } catch (error) {
+    console.error('Delete user error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Gagal menghapus user: ' + error.message
+    });
+  }
+});
+
 module.exports = router;
