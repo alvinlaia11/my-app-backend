@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { supabase } = require('../config/supabase');
 const { verifyToken } = require('../middleware/auth');
+const { supabase } = require('../config/supabase');
 
 // GET /api/cases/:id
 router.get('/:id', verifyToken, async (req, res) => {
@@ -123,22 +123,30 @@ router.delete('/:id', verifyToken, async (req, res) => {
 // POST /api/cases - Tambah kasus baru
 router.post('/', verifyToken, async (req, res) => {
   try {
-    const { title, date, description, parties, type, status } = req.body;
+    const { title, date, description, parties, type } = req.body;
     const userId = req.user.userId;
 
+    // Validasi input
+    if (!title || !date || !type) {
+      return res.status(400).json({
+        success: false,
+        error: 'Judul, tanggal, dan tipe kasus harus diisi'
+      });
+    }
+
+    // Insert ke database
     const { data, error } = await supabase
       .from('cases')
-      .insert([
-        { 
-          title,
-          date,
-          description,
-          parties,
-          type,
-          status,
-          user_id: userId
-        }
-      ])
+      .insert({
+        title,
+        date,
+        description,
+        parties,
+        type,
+        user_id: userId,
+        created_by: userId,
+        notification_sent: false
+      })
       .select()
       .single();
 
@@ -153,7 +161,7 @@ router.post('/', verifyToken, async (req, res) => {
     console.error('Error creating case:', error);
     res.status(500).json({
       success: false,
-      error: 'Gagal menambahkan kasus'
+      error: 'Gagal menambahkan kasus: ' + error.message
     });
   }
 });
