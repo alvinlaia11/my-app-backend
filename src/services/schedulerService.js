@@ -1,5 +1,6 @@
 const cron = require('node-cron');
 const { supabase } = require('../config/supabase');
+const { sendNotification } = require('./notificationService');
 
 // Jalankan setiap menit
 cron.schedule('* * * * *', async () => {
@@ -11,18 +12,32 @@ cron.schedule('* * * * *', async () => {
       .from('notifications')
       .select('*')
       .eq('is_sent', false)
-      .lte('schedule_date', now.toISOString());
+      .lte('schedule_date', now.toISOString())
+      .eq('type', 'schedule');  // Tambahkan filter untuk tipe schedule
 
     if (error) throw error;
+    console.log('Found scheduled notifications:', notifications);
 
-    // Update status notifikasi
+    // Kirim notifikasi
     if (notifications?.length > 0) {
-      const { error: updateError } = await supabase
-        .from('notifications')
-        .update({ is_sent: true })
-        .in('id', notifications.map(n => n.id));
+      for (const notification of notifications) {
+        try {
+          await sendNotification(notification.user_id, {
+            message: notification.message,
+            type: 'schedule'
+          });
 
-      if (updateError) throw updateError;
+          // Update status notifikasi
+          const { error: updateError } = await supabase
+            .from('notifications')
+            .update({ is_sent: true })
+            .eq('id', notification.id);
+
+          if (updateError) throw updateError;
+        } catch (error) {
+          console.error('Error processing notification:', error);
+        }
+      }
     }
   } catch (error) {
     console.error('Scheduler error:', error);

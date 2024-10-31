@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { supabase } = require('../config/supabase');
 const { verifyToken } = require('../middleware/auth');
+const { createScheduledNotification } = require('../services/notificationService');
 
 router.get('/', verifyToken, async (req, res) => {
   try {
@@ -52,6 +53,26 @@ router.get('/unread', verifyToken, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Gagal mengambil jumlah notifikasi'
+    });
+  }
+});
+
+router.post('/schedule', verifyToken, async (req, res) => {
+  try {
+    const { message, scheduleDate } = req.body;
+    const userId = req.user.userId;
+
+    const notification = await createScheduledNotification(userId, message, scheduleDate);
+    
+    res.json({
+      success: true,
+      data: notification
+    });
+  } catch (error) {
+    console.error('Error scheduling notification:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Gagal membuat notifikasi terjadwal'
     });
   }
 });
