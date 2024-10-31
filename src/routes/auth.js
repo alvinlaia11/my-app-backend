@@ -303,4 +303,53 @@ router.delete('/users/:id', verifyToken, verifyAdmin, async (req, res) => {
   }
 });
 
+// GET /api/auth/profile
+router.get('/profile', verifyToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    // Ambil data profil dari tabel user_profiles
+    const { data: profile, error } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle(); // Gunakan maybeSingle() daripada single()
+
+    if (error) throw error;
+
+    // Jika profil belum ada, buat profil baru
+    if (!profile) {
+      const { data: newProfile, error: createError } = await supabase
+        .from('user_profiles')
+        .insert({
+          user_id: userId,
+          email: req.user.email,
+          username: req.user.email.split('@')[0],
+          role: req.user.role
+        })
+        .select()
+        .single();
+
+      if (createError) throw createError;
+
+      return res.json({
+        success: true,
+        profile: newProfile
+      });
+    }
+
+    res.json({
+      success: true,
+      profile
+    });
+
+  } catch (error) {
+    console.error('Error fetching profile:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Gagal mengambil profil: ' + error.message
+    });
+  }
+});
+
 module.exports = router;
