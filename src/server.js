@@ -9,6 +9,7 @@ const authRouter = require('./routes/auth');
 const { router: foldersRouter } = require('./routes/folders');
 const casesRouter = require('./routes/cases');
 const notificationsRouter = require('./routes/notifications');
+const userRouter = require('./routes/user');
 
 const app = express();
 
@@ -44,6 +45,7 @@ app.use((req, res, next) => {
 app.use('/api/auth', authRouter);
 app.use('/api/cases', casesRouter);
 app.use('/api/notifications', notificationsRouter);
+app.use('/api/user', userRouter);
 
 app.use(fileUpload({
   createParentPath: true,
