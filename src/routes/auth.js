@@ -148,10 +148,10 @@ router.post('/create-user', verifyToken, verifyAdmin, async (req, res) => {
   try {
     const { email, password, username, position, phone, office } = req.body;
 
-    if (!email || !password) {
+    if (!email || !password || !username) {
       return res.status(400).json({
         success: false,
-        error: 'Email dan password harus diisi'
+        error: 'Email, password, dan username harus diisi'
       });
     }
 
@@ -159,29 +159,17 @@ router.post('/create-user', verifyToken, verifyAdmin, async (req, res) => {
     const { data, error: signupError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
-      email_confirm: true
+      email_confirm: true,
+      user_metadata: {
+        username,
+        position,
+        phone,
+        office,
+        role: 'user'
+      }
     });
 
     if (signupError) throw signupError;
-
-    // Buat profil user
-    const { error: profileError } = await supabaseAdmin
-      .from('user_profiles')
-      .insert({
-        user_id: data.user.id,
-        email: data.user.email,
-        username: username || email.split('@')[0],
-        role: 'user',
-        position,
-        phone,
-        office
-      });
-
-    if (profileError) {
-      console.error('Error creating profile:', profileError);
-      await supabaseAdmin.auth.admin.deleteUser(data.user.id);
-      throw new Error('Gagal membuat profil user: ' + profileError.message);
-    }
 
     res.json({
       success: true,
