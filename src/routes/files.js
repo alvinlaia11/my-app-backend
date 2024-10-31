@@ -128,65 +128,39 @@ router.post('/upload', verifyToken, async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    const { type, path, filename } = req.body;
     const userId = req.user.userId;
 
-    console.log('Attempting to delete file:', { fileId: id, userId });
+    if (type === 'folder') {
+      // Hapus folder
+      const { error } = await supabase
+        .from('folders')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', userId);
 
-    // Dapatkan info file
-    const { data: file, error: fetchError } = await supabase
-      .from('files')
-      .select('*')
-      .eq('id', id)
-      .eq('user_id', userId)
-      .single();
+      if (error) throw error;
+    } else {
+      // Hapus file
+      const { error } = await supabase
+        .from('files')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', userId);
 
-    if (fetchError) {
-      console.error('Error fetching file:', fetchError);
-      throw fetchError;
-    }
-
-    if (!file) {
-      return res.status(404).json({
-        success: false,
-        error: 'File tidak ditemukan'
-      });
-    }
-
-    // Hapus file dari storage
-    const filePath = `${userId}/${file.path}/${file.filename}`.replace(/\/+/g, '/');
-    console.log('Deleting file from storage:', filePath);
-    
-    const { error: storageError } = await supabase.storage
-      .from('files')
-      .remove([filePath]);
-
-    if (storageError) {
-      console.error('Error deleting from storage:', storageError);
-      throw storageError;
-    }
-
-    // Hapus metadata dari database
-    const { error: deleteError } = await supabase
-      .from('files')
-      .delete()
-      .eq('id', id)
-      .eq('user_id', userId);
-
-    if (deleteError) {
-      console.error('Error deleting from database:', deleteError);
-      throw deleteError;
+      if (error) throw error;
     }
 
     res.json({
       success: true,
-      message: 'File berhasil dihapus'
+      message: `${type === 'folder' ? 'Folder' : 'File'} berhasil dihapus`
     });
 
   } catch (error) {
-    console.error('Delete file error:', error);
+    console.error('Delete error:', error);
     res.status(500).json({
       success: false,
-      error: 'Gagal menghapus file: ' + error.message
+      error: error.message
     });
   }
 });
