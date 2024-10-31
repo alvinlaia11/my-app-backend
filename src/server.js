@@ -41,15 +41,22 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use('/api/auth', authRouter);
+app.use('/api/cases', casesRouter);
+app.use('/api/notifications', notificationsRouter);
+
 app.use(fileUpload({
   createParentPath: true,
   limits: { 
-    fileSize: 10 * 1024 * 1024 // 10MB
+    fileSize: 10 * 1024 * 1024
   },
   abortOnLimit: true,
   responseOnLimit: 'File terlalu besar, maksimal 10MB',
   debug: true
 }));
+
+app.use('/api/files', filesRouter);
+app.use('/api/folders', foldersRouter);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -69,13 +76,6 @@ app.get('/health', (req, res) => {
     });
   }
 });
-
-// Daftarkan routes
-app.use('/api/auth', authRouter);
-app.use('/api/files', filesRouter);
-app.use('/api/folders', foldersRouter);
-app.use('/api/cases', casesRouter);
-app.use('/api/notifications', notificationsRouter);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
