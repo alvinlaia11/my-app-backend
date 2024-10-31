@@ -14,12 +14,7 @@ router.get('/profile', async (req, res) => {
     const userId = req.user.userId;
     console.log('Fetching user profile:', { userId });
 
-    // Ambil data user dari supabase auth
-    const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId);
-    
-    if (userError) throw userError;
-
-    // Ambil profil dari database
+    // Ambil profil dari database tanpa perlu akses admin
     const { data: profile, error: profileError } = await supabase
       .from('user_profiles')
       .select('*')
@@ -32,9 +27,9 @@ router.get('/profile', async (req, res) => {
         .from('user_profiles')
         .insert({
           user_id: userId,
-          email: userData.user.email,
-          username: userData.user.email.split('@')[0],
-          role: userData.user.user_metadata?.role || 'user',
+          email: req.user.email,
+          username: req.user.email.split('@')[0],
+          role: req.user.role || 'user',
           created_at: new Date().toISOString()
         })
         .select()
@@ -44,10 +39,7 @@ router.get('/profile', async (req, res) => {
 
       return res.json({
         success: true,
-        profile: {
-          ...newProfile,
-          user_metadata: userData.user.user_metadata
-        }
+        profile: newProfile
       });
     }
 
@@ -55,10 +47,7 @@ router.get('/profile', async (req, res) => {
 
     res.json({
       success: true,
-      profile: {
-        ...profile,
-        user_metadata: userData.user.user_metadata
-      }
+      profile
     });
 
   } catch (error) {
