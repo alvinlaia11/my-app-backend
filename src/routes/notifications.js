@@ -29,4 +29,31 @@ router.get('/', verifyToken, async (req, res) => {
   }
 });
 
+router.get('/unread', verifyToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('count')
+      .eq('user_id', userId)
+      .eq('is_read', false)
+      .single();
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      count: data?.count || 0
+    });
+
+  } catch (error) {
+    console.error('Error fetching unread notifications:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Gagal mengambil jumlah notifikasi'
+    });
+  }
+});
+
 module.exports = router; 

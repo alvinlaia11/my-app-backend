@@ -18,14 +18,12 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: [
-      "http://localhost:3000",
-      "http://localhost:3002",
-      "https://my-app-frontend-production.up.railway.app"
-    ],
+    origin: ["http://localhost:3000"],
     methods: ["GET", "POST"],
-    credentials: true
-  }
+    credentials: true,
+    allowedHeaders: ["Authorization"]
+  },
+  transports: ['websocket', 'polling']
 });
 
 io.on('connection', (socket) => {

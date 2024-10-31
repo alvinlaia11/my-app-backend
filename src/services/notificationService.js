@@ -8,7 +8,8 @@ const sendNotification = async (io, userId, notification) => {
         user_id: userId,
         message: notification.message,
         type: notification.type,
-        is_read: false
+        is_read: false,
+        created_at: new Date().toISOString()
       }])
       .select()
       .single();
