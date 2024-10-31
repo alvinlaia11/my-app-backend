@@ -125,39 +125,63 @@ router.post('/upload', verifyToken, async (req, res) => {
 });
 
 // DELETE endpoint untuk file
-router.delete('/files/:id', async (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
-    const fileId = req.params.id;
+    const { id } = req.params;
     const userId = req.user.userId;
 
-    // Dapatkan informasi file
+    console.log('Attempting to delete file:', { fileId: id, userId });
+
+    // Dapatkan info file
     const { data: file, error: fetchError } = await supabase
       .from('files')
       .select('*')
-      .eq('id', fileId)
+      .eq('id', id)
       .eq('user_id', userId)
       .single();
 
-    if (fetchError) throw fetchError;
-    if (!file) throw new Error('File tidak ditemukan');
+    if (fetchError) {
+      console.error('Error fetching file:', fetchError);
+      throw fetchError;
+    }
+
+    if (!file) {
+      return res.status(404).json({
+        success: false,
+        error: 'File tidak ditemukan'
+      });
+    }
 
     // Hapus file dari storage
+    const filePath = `${userId}/${file.path}/${file.filename}`.replace(/\/+/g, '/');
+    console.log('Deleting file from storage:', filePath);
+    
     const { error: storageError } = await supabase.storage
       .from('files')
-      .remove([`${userId}/${file.path}/${file.filename}`]);
+      .remove([filePath]);
 
-    if (storageError) throw storageError;
+    if (storageError) {
+      console.error('Error deleting from storage:', storageError);
+      throw storageError;
+    }
 
     // Hapus metadata dari database
-    const { error: dbError } = await supabase
+    const { error: deleteError } = await supabase
       .from('files')
       .delete()
-      .eq('id', fileId)
+      .eq('id', id)
       .eq('user_id', userId);
 
-    if (dbError) throw dbError;
+    if (deleteError) {
+      console.error('Error deleting from database:', deleteError);
+      throw deleteError;
+    }
 
-    res.json({ success: true });
+    res.json({
+      success: true,
+      message: 'File berhasil dihapus'
+    });
+
   } catch (error) {
     console.error('Delete file error:', error);
     res.status(500).json({
