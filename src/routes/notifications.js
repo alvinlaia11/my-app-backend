@@ -62,6 +62,12 @@ router.post('/schedule', verifyToken, async (req, res) => {
     const { message, scheduleDate } = req.body;
     const userId = req.user.userId;
 
+    console.log('Creating scheduled notification:', {
+      userId,
+      message,
+      scheduleDate
+    });
+
     const notification = await createScheduledNotification(userId, message, scheduleDate);
     
     res.json({
