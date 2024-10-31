@@ -31,6 +31,8 @@ const createScheduledNotification = async (userId, message, scheduleDate) => {
       throw new Error('Invalid schedule date');
     }
 
+    const now = moment().tz('Asia/Jakarta');
+    
     const { data, error } = await supabase
       .from('notifications')
       .insert([{
@@ -38,8 +40,9 @@ const createScheduledNotification = async (userId, message, scheduleDate) => {
         message: message,
         is_read: false,
         is_sent: false,
-        schedule_date: scheduleMoment.toDate().toISOString(),
-        created_at: moment().tz('Asia/Jakarta').toDate().toISOString()
+        schedule_date: scheduleMoment.format('YYYY-MM-DD HH:mm:ss'),
+        created_at: now.format('YYYY-MM-DD HH:mm:ss'),
+        type: 'reminder'
       }])
       .select()
       .single();
