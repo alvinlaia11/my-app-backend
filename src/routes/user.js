@@ -2,8 +2,11 @@ const express = require('express');
 const router = express.Router();
 const { supabase } = require('../config/supabase');
 const { verifyToken } = require('../middleware/auth');
+const fileUpload = require('express-fileupload');
+const path = require('path');
 
 router.use(verifyToken);
+router.use(fileUpload());
 
 // GET /api/user/profile
 router.get('/profile', async (req, res) => {
@@ -42,6 +45,59 @@ router.get('/profile', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Gagal mengambil profil: ' + error.message
+    });
+  }
+});
+
+// POST /api/user/avatar
+router.post('/avatar', async (req, res) => {
+  try {
+    if (!req.files || !req.files.avatar) {
+      return res.status(400).json({
+        success: false,
+        error: 'File avatar harus diupload'
+      });
+    }
+
+    const avatar = req.files.avatar;
+    const userId = req.user.userId;
+    
+    // Upload ke storage
+    const filename = `avatar-${userId}-${Date.now()}${path.extname(avatar.name)}`;
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(`public/${filename}`, avatar.data, {
+        contentType: avatar.mimetype,
+        upsert: true
+      });
+
+    if (uploadError) throw uploadError;
+
+    // Get public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from('avatars')
+      .getPublicUrl(`public/${filename}`);
+
+    // Update user_profiles
+    const { error: updateError } = await supabase
+      .from('user_profiles')
+      .update({
+        avatar_url: publicUrl
+      })
+      .eq('user_id', userId);
+
+    if (updateError) throw updateError;
+
+    res.json({
+      success: true,
+      avatar_url: publicUrl
+    });
+
+  } catch (error) {
+    console.error('Error uploading avatar:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Gagal mengunggah avatar: ' + error.message
     });
   }
 });
