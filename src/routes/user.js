@@ -1,24 +1,24 @@
 const express = require('express');
 const router = express.Router();
-const { verifyToken } = require('../middleware/auth');
 const { supabase } = require('../config/supabase');
+const { verifyToken } = require('../middleware/auth');
+
+router.use(verifyToken);
 
 // GET /api/user/profile
-router.get('/profile', verifyToken, async (req, res) => {
+router.get('/profile', async (req, res) => {
   try {
     const userId = req.user.userId;
 
-    // Ambil data profil dari tabel user_profiles
+    // Coba ambil profil user
     const { data: profile, error } = await supabase
       .from('user_profiles')
       .select('*')
       .eq('user_id', userId)
       .single();
 
-    if (error) throw error;
-
-    if (!profile) {
-      // Jika profil belum ada, buat profil baru
+    // Jika profil tidak ditemukan, buat profil baru
+    if (error && error.code === 'PGRST116') {
       const { data: newProfile, error: createError } = await supabase
         .from('user_profiles')
         .insert({
@@ -31,10 +31,10 @@ router.get('/profile', verifyToken, async (req, res) => {
         .single();
 
       if (createError) throw createError;
-      
       return res.json(newProfile);
     }
 
+    if (error) throw error;
     res.json(profile);
 
   } catch (error) {
@@ -42,41 +42,6 @@ router.get('/profile', verifyToken, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Gagal mengambil profil: ' + error.message
-    });
-  }
-});
-
-// PUT /api/user/profile
-router.put('/profile', verifyToken, async (req, res) => {
-  try {
-    const userId = req.user.userId;
-    const { username, position, phone, office } = req.body;
-
-    const { data, error } = await supabase
-      .from('profiles')
-      .update({
-        username,
-        position,
-        phone,
-        office,
-        updated_at: new Date()
-      })
-      .eq('id', userId)
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    res.json({
-      success: true,
-      data
-    });
-
-  } catch (error) {
-    console.error('Error updating profile:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Gagal memperbarui profil'
     });
   }
 });
