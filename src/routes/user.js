@@ -12,36 +12,57 @@ router.use(fileUpload());
 router.get('/profile', async (req, res) => {
   try {
     const userId = req.user.userId;
+    console.log('Fetching user profile:', { userId });
 
-    // Coba ambil profil user
-    const { data: profile, error } = await supabase
+    // Ambil data user dari supabase auth
+    const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId);
+    
+    if (userError) throw userError;
+
+    // Ambil profil dari database
+    const { data: profile, error: profileError } = await supabase
       .from('user_profiles')
       .select('*')
       .eq('user_id', userId)
       .single();
 
-    // Jika profil tidak ditemukan, buat profil baru
-    if (error && error.code === 'PGRST116') {
+    if (profileError && profileError.code === 'PGRST116') {
+      // Buat profil baru jika belum ada
       const { data: newProfile, error: createError } = await supabase
         .from('user_profiles')
         .insert({
           user_id: userId,
-          email: req.user.email,
-          username: req.user.email.split('@')[0],
-          role: req.user.role
+          email: userData.user.email,
+          username: userData.user.email.split('@')[0],
+          role: userData.user.user_metadata?.role || 'user',
+          created_at: new Date().toISOString()
         })
         .select()
         .single();
 
       if (createError) throw createError;
-      return res.json(newProfile);
+
+      return res.json({
+        success: true,
+        profile: {
+          ...newProfile,
+          user_metadata: userData.user.user_metadata
+        }
+      });
     }
 
-    if (error) throw error;
-    res.json(profile);
+    if (profileError) throw profileError;
+
+    res.json({
+      success: true,
+      profile: {
+        ...profile,
+        user_metadata: userData.user.user_metadata
+      }
+    });
 
   } catch (error) {
-    console.error('Error in profile endpoint:', error);
+    console.error('Error fetching profile:', error);
     res.status(500).json({
       success: false,
       error: 'Gagal mengambil profil: ' + error.message
