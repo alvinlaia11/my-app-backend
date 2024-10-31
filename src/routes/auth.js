@@ -198,15 +198,15 @@ router.post('/verify', async (req, res) => {
 // GET /api/auth/users
 router.get('/users', verifyToken, verifyAdmin, async (req, res) => {
   try {
-    // Gunakan supabaseAdmin untuk mengambil daftar users
-    const { data: { users }, error } = await supabaseAdmin.auth.admin.listUsers();
+    // Ambil daftar user dari auth
+    const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
     
-    if (error) {
-      console.error('Error listing users:', error);
-      throw error;
+    if (authError) {
+      console.error('Error listing users:', authError);
+      throw authError;
     }
 
-    // Ambil data tambahan dari tabel profiles jika ada
+    // Ambil data dari tabel profiles
     const { data: profiles, error: profileError } = await supabase
       .from('profiles')
       .select('*');
@@ -216,13 +216,14 @@ router.get('/users', verifyToken, verifyAdmin, async (req, res) => {
       throw profileError;
     }
 
-    // Gabungkan data users dengan profiles
-    const enrichedUsers = users.map(user => {
+    // Gabungkan data
+    const users = authData.users.map(user => {
       const profile = profiles?.find(p => p.id === user.id) || {};
       return {
         id: user.id,
         email: user.email,
         username: profile.username || user.email,
+        status: user.confirmed_at ? 'Aktif' : 'Pending',
         role: user.user_metadata?.role || 'user',
         created_at: user.created_at
       };
@@ -230,7 +231,7 @@ router.get('/users', verifyToken, verifyAdmin, async (req, res) => {
 
     res.json({
       success: true,
-      users: enrichedUsers
+      users: users
     });
 
   } catch (error) {
