@@ -309,21 +309,23 @@ router.get('/profile', verifyToken, async (req, res) => {
     const userId = req.user.userId;
     console.log('Fetching profile for user:', userId);
 
-    // Cek dan buat profil jika belum ada
-    const { data: profile, error } = await supabase
+    // Gunakan supabaseAdmin untuk bypass RLS
+    const { data: profile, error } = await supabaseAdmin
       .from('user_profiles')
       .select('*')
       .eq('user_id', userId)
       .maybeSingle();
 
-    if (error && error.code !== 'PGRST116') {
+    if (error) {
+      console.error('Database error:', error);
       throw error;
     }
 
+    // Jika profil belum ada, buat profil baru
     if (!profile) {
-      const { data: newProfile, error: createError } = await supabase
+      const { data: newProfile, error: createError } = await supabaseAdmin
         .from('user_profiles')
-        .upsert({
+        .insert({
           user_id: userId,
           email: req.user.email,
           username: req.user.email.split('@')[0],
