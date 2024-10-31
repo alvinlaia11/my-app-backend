@@ -50,7 +50,7 @@ router.get('/profile', async (req, res) => {
 });
 
 // POST /api/user/avatar
-router.post('/avatar', async (req, res) => {
+router.post('/avatar', verifyToken, async (req, res) => {
   try {
     if (!req.files || !req.files.avatar) {
       return res.status(400).json({
@@ -61,29 +61,30 @@ router.post('/avatar', async (req, res) => {
 
     const avatar = req.files.avatar;
     const userId = req.user.userId;
-    
+    const filename = `${userId}-${Date.now()}${path.extname(avatar.name)}`;
+
     // Upload ke storage
-    const filename = `avatar-${userId}-${Date.now()}${path.extname(avatar.name)}`;
     const { error: uploadError } = await supabase.storage
       .from('avatars')
-      .upload(`public/${filename}`, avatar.data, {
+      .upload(filename, avatar.data, {
         contentType: avatar.mimetype,
         upsert: true
       });
 
-    if (uploadError) throw uploadError;
+    if (uploadError) {
+      console.error('Upload error:', uploadError);
+      throw uploadError;
+    }
 
     // Get public URL
     const { data: { publicUrl } } = supabase.storage
       .from('avatars')
-      .getPublicUrl(`public/${filename}`);
+      .getPublicUrl(filename);
 
     // Update user_profiles
     const { error: updateError } = await supabase
       .from('user_profiles')
-      .update({
-        avatar_url: publicUrl
-      })
+      .update({ avatar_url: publicUrl })
       .eq('user_id', userId);
 
     if (updateError) throw updateError;
@@ -94,10 +95,43 @@ router.post('/avatar', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error uploading avatar:', error);
+    console.error('Avatar upload error:', error);
+    res.status(500).json({
+      success: false, 
+      error: 'Gagal mengupload avatar: ' + error.message
+    });
+  }
+});
+
+// PUT /api/user/profile
+router.put('/profile', verifyToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { username, email, position, phone, office } = req.body;
+
+    // Update profile di database
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .update({
+        username,
+        email,
+        position,
+        phone,
+        office,
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json(data);
+  } catch (error) {
+    console.error('Error updating profile:', error);
     res.status(500).json({
       success: false,
-      error: 'Gagal mengunggah avatar: ' + error.message
+      error: 'Gagal memperbarui profil: ' + error.message
     });
   }
 });
