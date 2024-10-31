@@ -6,6 +6,11 @@ const supabaseKey = process.env.SUPABASE_ANON_KEY;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !supabaseKey || !supabaseServiceRoleKey) {
+  console.error('Missing environment variables:', {
+    supabaseUrl: !!supabaseUrl,
+    supabaseKey: !!supabaseKey,
+    supabaseServiceRoleKey: !!supabaseServiceRoleKey
+  });
   throw new Error('Supabase credentials missing');
 }
 

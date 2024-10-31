@@ -24,8 +24,9 @@ app.use(cors({
   origin: [
     "http://localhost:3000",
     "http://localhost:3002",
+    "https://my-app-backend-production-15df.up.railway.app",
     "https://my-app-backend-production-ad9e.up.railway.app",
-    "*" // sementara untuk testing
+    "*"
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -89,6 +90,7 @@ app.listen(PORT, () => {
     "http://localhost:3000",
     "http://localhost:3002",
     "https://my-app-backend-production-15df.up.railway.app",
+    "https://my-app-backend-production-ad9e.up.railway.app",
     "*"
   ]);
   console.log('Environment:', process.env.NODE_ENV);
