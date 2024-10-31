@@ -4,6 +4,7 @@ const cors = require('cors');
 const fileUpload = require('express-fileupload');
 const path = require('path');
 const { supabase } = require('./config/supabase');
+const { initializeScheduler } = require('./services/schedulerService');
 
 const { router: filesRouter } = require('./routes/files');
 const authRouter = require('./routes/auth');
@@ -85,4 +86,6 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  initializeScheduler();
+  console.log('Scheduler initialized');
 });

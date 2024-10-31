@@ -2,43 +2,60 @@ const cron = require('node-cron');
 const { supabase } = require('../config/supabase');
 const { sendNotification } = require('./notificationService');
 
-// Jalankan setiap menit
-cron.schedule('* * * * *', async () => {
-  try {
-    const now = new Date();
-    console.log('Checking scheduled notifications at:', now);
+const initializeScheduler = () => {
+  console.log('Starting notification scheduler...');
+  
+  cron.schedule('* * * * *', async () => {
+    const timestamp = new Date().toISOString();
+    console.log(`[${timestamp}] Running notification check...`);
     
-    // Ambil notifikasi yang belum dikirim dan waktunya sudah tiba
-    const { data: notifications, error } = await supabase
-      .from('notifications')
-      .select('*')
-      .eq('is_sent', false)
-      .lte('schedule_date', now.toISOString())
-      .eq('type', 'schedule');
+    try {
+      const now = new Date();
+      
+      // Log timezone untuk debugging
+      console.log('Server timezone:', Intl.DateTimeFormat().resolvedOptions().timeZone);
+      console.log('Current time:', now.toISOString());
+      
+      const { data: notifications, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('is_sent', false)
+        .lte('schedule_date', now.toISOString())
+        .eq('type', 'schedule');
 
-    console.log('Found notifications:', notifications);
+      console.log('Query result:', { notifications, error });
 
-    if (notifications?.length > 0) {
-      for (const notification of notifications) {
-        try {
-          // Kirim notifikasi baru
-          await sendNotification(notification.user_id, {
-            message: notification.message,
-            type: 'reminder'
-          });
+      if (notifications?.length > 0) {
+        console.log(`Found ${notifications.length} notifications to process`);
+        
+        for (const notification of notifications) {
+          console.log('Processing notification:', notification);
+          
+          try {
+            await sendNotification(notification.user_id, {
+              message: notification.message,
+              type: 'reminder'
+            });
+            
+            console.log('Notification sent successfully');
 
-          // Update status notifikasi yang dijadwalkan
-          await supabase
-            .from('notifications')
-            .update({ is_sent: true })
-            .eq('id', notification.id);
-
-        } catch (error) {
-          console.error('Error processing notification:', error);
+            await supabase
+              .from('notifications')
+              .update({ is_sent: true })
+              .eq('id', notification.id);
+              
+            console.log('Notification marked as sent');
+          } catch (error) {
+            console.error('Error processing notification:', error);
+          }
         }
+      } else {
+        console.log('No notifications to process');
       }
+    } catch (error) {
+      console.error('Scheduler error:', error);
     }
-  } catch (error) {
-    console.error('Scheduler error:', error);
-  }
-}); 
+  });
+};
+
+module.exports = { initializeScheduler }; 
