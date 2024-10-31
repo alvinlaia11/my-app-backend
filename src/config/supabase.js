@@ -27,7 +27,10 @@ const supabase = createClient(supabaseUrl, supabaseKey, {
     schema: 'public'
   },
   realtime: {
-    timeout: 20000
+    timeout: 20000,
+    params: {
+      eventsPerSecond: 10
+    }
   },
   dangerouslyAllowBrowser: true
 });

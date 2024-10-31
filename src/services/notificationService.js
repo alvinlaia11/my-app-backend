@@ -1,6 +1,6 @@
 const { supabase } = require('../config/supabase');
 
-const sendNotification = async (io, userId, notification) => {
+const sendNotification = async (userId, notification) => {
   try {
     const { data, error } = await supabase
       .from('notifications')
@@ -15,8 +15,6 @@ const sendNotification = async (io, userId, notification) => {
       .single();
 
     if (error) throw error;
-
-    io.to(userId).emit('notification', data);
     return data;
   } catch (error) {
     console.error('Error sending notification:', error);

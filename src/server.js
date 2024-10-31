@@ -1,6 +1,5 @@
 const express = require('express');
 const http = require('http');
-const { Server } = require('socket.io');
 const cors = require('cors');
 const fileUpload = require('express-fileupload');
 const path = require('path');
@@ -15,33 +14,6 @@ const userRouter = require('./routes/user');
 
 const app = express();
 const server = http.createServer(app);
-
-const io = new Server(server, {
-  cors: {
-    origin: ["http://localhost:3000"],
-    methods: ["GET", "POST"],
-    credentials: true,
-    allowedHeaders: ["Authorization"]
-  },
-  transports: ['websocket', 'polling']
-});
-
-io.on('connection', (socket) => {
-  console.log('Client connected:', socket.id);
-  
-  socket.on('disconnect', () => {
-    console.log('Client disconnected:', socket.id);
-  });
-});
-
-// Tambahkan di awal setelah inisialisasi app
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-});
-
-process.on('uncaughtException', (error) => {
-  console.error('Uncaught Exception:', error);
-});
 
 app.use(express.json());
 app.use(cors({
