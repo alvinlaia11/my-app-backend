@@ -10,23 +10,22 @@ const initializeScheduler = () => {
 
   cron.schedule('*/30 * * * * *', async () => {
     try {
-      const jakartaTime = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
-      const now = new Date(jakartaTime);
+      const now = new Date();
+      const jakartaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
       
       console.log('\n=== Scheduler Check ===');
       console.log('Server time:', now.toISOString());
-      console.log('Jakarta time:', jakartaTime);
+      console.log('Jakarta time:', jakartaTime.toISOString());
       
       const { data: notifications, error } = await supabase
         .from('notifications')
         .select('*')
         .eq('is_sent', false)
-        .lte('schedule_date', now.toISOString());
+        .lte('schedule_date', jakartaTime.toISOString());
 
       if (error) throw error;
 
       console.log(`Found ${notifications?.length || 0} pending notifications`);
-      console.log('Notifications:', notifications);
 
       if (notifications?.length > 0) {
         for (const notif of notifications) {

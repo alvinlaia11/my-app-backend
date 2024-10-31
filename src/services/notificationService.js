@@ -24,8 +24,10 @@ const sendNotification = async (userId, notification) => {
 
 const createScheduledNotification = async (userId, message, scheduleDate) => {
   try {
-    const jakartaDate = new Date(scheduleDate).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
-    console.log('Creating notification with Jakarta time:', jakartaDate);
+    const scheduleDateObj = new Date(scheduleDate);
+    if (isNaN(scheduleDateObj.getTime())) {
+      throw new Error('Invalid schedule date');
+    }
 
     const { data, error } = await supabase
       .from('notifications')
@@ -34,7 +36,7 @@ const createScheduledNotification = async (userId, message, scheduleDate) => {
         message: message,
         is_read: false,
         is_sent: false,
-        schedule_date: new Date(jakartaDate).toISOString(),
+        schedule_date: scheduleDateObj.toISOString(),
         created_at: new Date().toISOString()
       }])
       .select()
