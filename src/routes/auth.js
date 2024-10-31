@@ -200,7 +200,7 @@ router.get('/users', verifyToken, verifyAdmin, async (req, res) => {
   try {
     console.log('Fetching users with token:', req.headers.authorization);
 
-    // Ambil daftar user dari auth
+    // Ambil daftar user dari auth menggunakan supabaseAdmin
     const { data, error } = await supabaseAdmin.auth.admin.listUsers();
     
     if (error) {
@@ -227,7 +227,10 @@ router.get('/users', verifyToken, verifyAdmin, async (req, res) => {
         username: profile.username || user.email,
         role: user.user_metadata?.role || 'user',
         created_at: user.created_at,
-        last_sign_in_at: user.last_sign_in_at
+        last_sign_in_at: user.last_sign_in_at,
+        position: profile.position,
+        phone: profile.phone,
+        office: profile.office
       };
     });
 
