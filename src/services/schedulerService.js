@@ -8,7 +8,9 @@ const initializeScheduler = () => {
   cron.schedule('* * * * *', async () => {
     try {
       const now = new Date();
-      console.log('Checking notifications at:', now.toISOString());
+      console.log('Current server time:', now);
+      console.log('Server timezone:', process.env.TZ || Intl.DateTimeFormat().resolvedOptions().timeZone);
+      console.log('ISO time:', now.toISOString());
       
       // Ambil notifikasi yang belum dikirim
       const { data: notifications, error } = await supabase
@@ -17,6 +19,12 @@ const initializeScheduler = () => {
         .eq('is_sent', false)
         .eq('type', 'schedule')
         .lte('schedule_date', now.toISOString());
+
+      console.log('Query params:', {
+        is_sent: false,
+        type: 'schedule',
+        schedule_date_lte: now.toISOString()
+      });
 
       if (error) {
         console.error('Error fetching notifications:', error);

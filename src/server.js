@@ -90,3 +90,6 @@ server.listen(PORT, () => {
   initializeScheduler();
   console.log('Scheduler initialized');
 });
+
+// Di bagian atas file, setelah imports
+process.env.TZ = 'Asia/Jakarta';
