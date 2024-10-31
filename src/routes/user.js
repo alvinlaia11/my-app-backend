@@ -8,32 +8,40 @@ router.get('/profile', verifyToken, async (req, res) => {
   try {
     const userId = req.user.userId;
 
-    // Ambil data user dari tabel profiles
+    // Ambil data profil dari tabel user_profiles
     const { data: profile, error } = await supabase
-      .from('profiles')
+      .from('user_profiles')
       .select('*')
-      .eq('id', userId)
+      .eq('user_id', userId)
       .single();
 
     if (error) throw error;
 
     if (!profile) {
-      return res.status(404).json({
-        success: false,
-        error: 'Profil tidak ditemukan'
-      });
+      // Jika profil belum ada, buat profil baru
+      const { data: newProfile, error: createError } = await supabase
+        .from('user_profiles')
+        .insert({
+          user_id: userId,
+          email: req.user.email,
+          username: req.user.email.split('@')[0],
+          role: req.user.role
+        })
+        .select()
+        .single();
+
+      if (createError) throw createError;
+      
+      return res.json(newProfile);
     }
 
-    res.json({
-      success: true,
-      ...profile
-    });
+    res.json(profile);
 
   } catch (error) {
-    console.error('Error fetching profile:', error);
+    console.error('Error in profile endpoint:', error);
     res.status(500).json({
       success: false,
-      error: 'Gagal mengambil data profil'
+      error: 'Gagal mengambil profil: ' + error.message
     });
   }
 });
