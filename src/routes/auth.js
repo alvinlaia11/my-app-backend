@@ -143,57 +143,49 @@ router.post('/signup', async (req, res) => {
   }
 });
 
-// POST /api/auth/create-user
+// POST /api/auth/create-user (Admin only)
 router.post('/create-user', verifyToken, verifyAdmin, async (req, res) => {
   try {
-    const { email, password, username } = req.body;
-    
-    if (!email || !password || !username) {
+    const { email, password, username, position, phone, office } = req.body;
+
+    if (!email || !password) {
       return res.status(400).json({
         success: false,
-        error: 'Email, password, dan username harus diisi'
+        error: 'Email dan password harus diisi'
       });
     }
 
     // Buat user baru menggunakan supabaseAdmin
-    const { data: { user }, error: createError } = await supabaseAdmin.auth.admin.createUser({
+    const { data, error: signupError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
-      email_confirm: true,
-      user_metadata: {
-        username,
-        role: 'user'
-      }
+      email_confirm: true
     });
 
-    if (createError) throw createError;
+    if (signupError) throw signupError;
 
     // Buat profil user
-    const { error: profileError } = await supabase
-      .from('profiles')
+    const { error: profileError } = await supabaseAdmin
+      .from('user_profiles')
       .insert({
-        id: user.id,
-        username,
-        email,
+        user_id: data.user.id,
+        email: data.user.email,
+        username: username || email.split('@')[0],
         role: 'user',
-        created_at: new Date().toISOString()
+        position,
+        phone,
+        office
       });
 
     if (profileError) {
-      // Rollback - hapus user jika gagal membuat profil
-      await supabaseAdmin.auth.admin.deleteUser(user.id);
-      throw profileError;
+      console.error('Error creating profile:', profileError);
+      await supabaseAdmin.auth.admin.deleteUser(data.user.id);
+      throw new Error('Gagal membuat profil user: ' + profileError.message);
     }
 
     res.json({
       success: true,
-      message: 'User berhasil dibuat',
-      user: {
-        id: user.id,
-        email: user.email,
-        username: user.user_metadata.username,
-        role: user.user_metadata.role
-      }
+      user: data.user
     });
 
   } catch (error) {
