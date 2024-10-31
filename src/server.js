@@ -85,6 +85,11 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server berjalan di port ${PORT}`);
-  console.log('CORS enabled for origins:', app.get('cors').origin);
+  console.log('CORS enabled for origins:', [
+    "http://localhost:3000",
+    "http://localhost:3002",
+    "https://my-app-backend-production-15df.up.railway.app",
+    "*"
+  ]);
   console.log('Environment:', process.env.NODE_ENV);
 });
