@@ -22,4 +22,27 @@ const sendNotification = async (userId, notification) => {
   }
 };
 
-module.exports = { sendNotification }; 
+const createScheduledNotification = async (userId, message, scheduleDate) => {
+  try {
+    const { data, error } = await supabase
+      .from('notifications')
+      .insert([{
+        user_id: userId,
+        message: message,
+        type: 'schedule',
+        is_read: false,
+        schedule_date: scheduleDate,
+        created_at: new Date().toISOString()
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error creating scheduled notification:', error);
+    throw error;
+  }
+};
+
+module.exports = { sendNotification, createScheduledNotification }; 
