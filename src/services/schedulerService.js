@@ -5,25 +5,18 @@ const { sendNotification } = require('./notificationService');
 const initializeScheduler = () => {
   console.log('Starting scheduler with config:', {
     timezone: process.env.TZ,
-    currentTime: new Date().toISOString()
+    currentTime: new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })
   });
 
-  // Jalankan pengecekan setiap 30 detik
   cron.schedule('*/30 * * * * *', async () => {
-    const now = new Date();
-    console.log('\n=== Scheduler Check ===');
-    console.log('Time:', now.toISOString());
-    
     try {
-      // Cek koneksi Supabase
-      const { data: testData, error: testError } = await supabase
-        .from('notifications')
-        .select('count')
-        .limit(1);
-        
-      console.log('Database connection test:', testError ? 'Failed' : 'Success');
-
-      // Ambil notifikasi
+      const jakartaTime = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
+      const now = new Date(jakartaTime);
+      
+      console.log('\n=== Scheduler Check ===');
+      console.log('Server time:', now.toISOString());
+      console.log('Jakarta time:', jakartaTime);
+      
       const { data: notifications, error } = await supabase
         .from('notifications')
         .select('*')
@@ -35,7 +28,6 @@ const initializeScheduler = () => {
       console.log(`Found ${notifications?.length || 0} pending notifications`);
       console.log('Notifications:', notifications);
 
-      // Proses notifikasi
       if (notifications?.length > 0) {
         for (const notif of notifications) {
           console.log(`Processing notification ID: ${notif.id}`);

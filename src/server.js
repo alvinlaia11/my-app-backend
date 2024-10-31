@@ -88,6 +88,10 @@ app.use((err, req, res, next) => {
 process.env.TZ = 'Asia/Jakarta';
 console.log('Server timezone set to:', process.env.TZ);
 
+// Verifikasi timezone
+const moment = require('moment-timezone');
+moment.tz.setDefault('Asia/Jakarta');
+
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
