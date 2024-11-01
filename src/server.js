@@ -39,27 +39,15 @@ app.use('/api/auth', authRouter);
 app.use('/api/cases', casesRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/user', userRouter);
-
-app.use(fileUpload({
-  createParentPath: true,
-  limits: { 
-    fileSize: 10 * 1024 * 1024
-  },
-  abortOnLimit: true,
-  responseOnLimit: 'File terlalu besar, maksimal 10MB',
-  debug: true
-}));
-
 app.use('/api/files', filesRouter);
 app.use('/api/folders', foldersRouter);
 
-// Serve static files
-app.use('/', express.static(path.join(__dirname, '../../my-app/build')));
+// Static file handling
+app.use(express.static(path.join(__dirname, '../build')));
 
 // Fallback route untuk React app
 app.get('*', (req, res) => {
-  if (req.path.startsWith('/api')) return next();
-  res.sendFile(path.join(__dirname, '../../my-app/build/index.html'));
+  res.sendFile(path.join(__dirname, '../build/index.html'));
 });
 
 // Test connection endpoint
