@@ -828,25 +828,35 @@ router.get('/preview/:id', verifyToken, async (req, res) => {
       .single();
       
     if (error) throw error;
+    if (!file) throw new Error('File tidak ditemukan');
+
+    // Pastikan file adalah gambar
+    const imageExtensions = ['jpg', 'jpeg', 'png', 'gif'];
+    const fileExtension = file.name.split('.').pop().toLowerCase();
+    
+    if (!imageExtensions.includes(fileExtension)) {
+      throw new Error('File bukan gambar');
+    }
     
     // Generate signed URL untuk preview
-    const { data: { signedUrl }, error: signError } = await supabase
+    const { data, error: signError } = await supabase
       .storage
-      .from('files')
+      .from('files') // pastikan ini sesuai dengan bucket name di Supabase
       .createSignedUrl(file.path, 60); // URL valid selama 60 detik
       
     if (signError) throw signError;
+    if (!data || !data.signedUrl) throw new Error('Gagal membuat signed URL');
     
     res.json({
       success: true,
-      url: signedUrl
+      url: data.signedUrl
     });
     
   } catch (error) {
     console.error('Error getting preview URL:', error);
     res.status(500).json({
       success: false,
-      error: 'Gagal mendapatkan URL preview'
+      error: error.message || 'Gagal mendapatkan URL preview'
     });
   }
 });
