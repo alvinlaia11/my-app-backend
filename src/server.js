@@ -20,13 +20,8 @@ app.use(express.json());
 app.use(cors({
   origin: [
     "http://localhost:3000",
-    "http://localhost:5000",
-    "https://my-app-frontend-production-e401.up.railway.app",
-    "http://my-app-frontend-production-e401.up.railway.app:8080",
-    "http://my-app-frontend-production-e401.up.railway.app:5000"
+    "https://my-app-frontend-production-e401.up.railway.app"
   ],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));
 
@@ -59,60 +54,29 @@ app.use('/api/files', filesRouter);
 app.use('/api/folders', foldersRouter);
 
 // Serve static files
-app.use(express.static(path.join(__dirname, '../../my-app/build')));
+app.use('/', express.static(path.join(__dirname, '../../my-app/build')));
 
-// Fallback route untuk client-side routing
+// Fallback route untuk React app
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../my-app/build', 'index.html'));
+  if (req.path.startsWith('/api')) return next();
+  res.sendFile(path.join(__dirname, '../../my-app/build/index.html'));
 });
 
 // Test connection endpoint
 app.get('/test-connection', async (req, res) => {
   try {
-    // Test Supabase connection
-    const { data: testData, error: supabaseError } = await supabase
+    const { error: supabaseError } = await supabase
       .from('cases')
       .select('count')
       .limit(1);
 
-    // Test environment variables
-    const envCheck = {
-      NODE_ENV: process.env.NODE_ENV || 'not set',
-      PORT: process.env.PORT || 'not set',
-      SUPABASE_URL: process.env.SUPABASE_URL ? 'set' : 'not set',
-      CORS_ORIGINS: [
-        "http://localhost:3000",
-        "https://my-app-frontend-production-e401.up.railway.app",
-        "http://my-app-frontend-production-e401.up.railway.app:8080"
-      ]
-    };
-
     res.json({
       success: true,
-      timestamp: new Date().toISOString(),
-      environment: envCheck,
-      database: {
-        connected: !supabaseError,
-        error: supabaseError ? supabaseError.message : null
-      },
-      server: {
-        status: 'running',
-        uptime: process.uptime()
-      },
-      request: {
-        origin: req.headers.origin,
-        method: req.method,
-        path: req.path
-      }
+      database: { connected: !supabaseError },
+      server: { status: 'running' }
     });
-
   } catch (error) {
-    console.error('Test connection error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message,
-      timestamp: new Date().toISOString()
-    });
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -145,12 +109,5 @@ moment.tz.setDefault('Asia/Jakarta');
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
-  console.log('Server URL:', process.env.NODE_ENV === 'production' 
-    ? 'https://my-app-frontend-production-e401.up.railway.app' 
-    : `http://localhost:${PORT}`
-  );
   initializeScheduler();
-}).on('error', (error) => {
-  console.error('Server failed to start:', error);
-  process.exit(1);
 });
