@@ -2,7 +2,7 @@ const express = require('express');
 const path = require('path');
 const cors = require('cors');
 const fileUpload = require('express-fileupload');
-const { createClient } = require('@supabase/supabase-js');
+const { supabase } = require('./config/supabase');
 
 const app = express();
 
@@ -43,29 +43,21 @@ app.get('/', (req, res) => {
 // Health check endpoint
 app.get('/health', async (req, res) => {
   try {
-    // Test Supabase connection
+    // Test database connection
     const { data, error } = await supabase.auth.getSession();
     
     if (error) {
-      console.error('Supabase health check failed:', error);
+      console.error('Database connection failed:', error);
       return res.status(503).json({
         status: 'error',
         message: 'Database connection failed',
-        timestamp: new Date().toISOString()
+        error: error.message
       });
     }
 
-    // Check memory usage
-    const memoryUsage = process.memoryUsage();
-    
     res.status(200).json({
       status: 'OK',
       timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      memory: {
-        heapUsed: Math.round(memoryUsage.heapUsed / 1024 / 1024) + 'MB',
-        heapTotal: Math.round(memoryUsage.heapTotal / 1024 / 1024) + 'MB'
-      },
       database: 'connected'
     });
 
@@ -73,8 +65,7 @@ app.get('/health', async (req, res) => {
     console.error('Health check error:', error);
     res.status(500).json({
       status: 'error',
-      message: error.message,
-      timestamp: new Date().toISOString()
+      message: error.message
     });
   }
 });
