@@ -823,18 +823,23 @@ router.get('/preview/:id', verifyToken, async (req, res) => {
     // Dapatkan data file dari database
     const { data: file, error } = await supabase
       .from('files')
-      .select('*')
+      .select('name, path, mimetype')
       .eq('id', id)
       .single();
       
     if (error) throw error;
-    if (!file) throw new Error('File tidak ditemukan');
+    if (!file || !file.name || !file.path) {
+      throw new Error('File tidak ditemukan atau data tidak lengkap');
+    }
 
-    // Pastikan file adalah gambar
-    const imageExtensions = ['jpg', 'jpeg', 'png', 'gif'];
-    const fileExtension = file.name.split('.').pop().toLowerCase();
+    // Pastikan file adalah gambar berdasarkan mimetype
+    const imageTypes = [
+      'image/jpeg',
+      'image/png',
+      'image/gif'
+    ];
     
-    if (!imageExtensions.includes(fileExtension)) {
+    if (!imageTypes.includes(file.mimetype)) {
       throw new Error('File bukan gambar');
     }
     
