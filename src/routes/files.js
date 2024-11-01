@@ -839,11 +839,6 @@ router.get('/preview/:id', verifyToken, async (req, res) => {
       throw new Error('File tidak ditemukan');
     }
 
-    // Validasi kepemilikan file
-    if (file.user_id !== userId) {
-      throw new Error('Anda tidak memiliki akses ke file ini');
-    }
-
     // Log data file untuk debugging
     console.log('File data:', file);
 
@@ -861,18 +856,38 @@ router.get('/preview/:id', verifyToken, async (req, res) => {
       throw new Error('File bukan gambar');
     }
 
-    // Buat path file yang benar
-    const filePath = file.path.startsWith('/') ? file.path.slice(1) : file.path;
+    // Buat path file yang benar sesuai dengan struktur upload
+    const filePath = `${userId}/${file.path}/${file.filename}`.replace(/\/+/g, '/');
     
+    console.log('Checking file existence in storage:', filePath);
+
+    // Cek keberadaan file di storage
+    const { data: existsData, error: existsError } = await supabase.storage
+      .from('files')
+      .list(filePath.split('/').slice(0, -1).join('/'));
+
+    if (existsError) {
+      console.error('Storage list error:', existsError);
+      throw new Error('Gagal memeriksa keberadaan file');
+    }
+
+    const fileExists = existsData.some(item => item.name === file.filename);
+    if (!fileExists) {
+      throw new Error('File tidak ditemukan di storage');
+    }
+
     console.log('Generating signed URL for path:', filePath);
 
-    // Generate signed URL
+    // Generate signed URL dengan error handling yang lebih baik
     const { data: urlData, error: signError } = await supabase.storage
       .from('files')
       .createSignedUrl(filePath, 300);
 
     if (signError) {
       console.error('Signed URL error:', signError);
+      if (signError.status === 400) {
+        throw new Error('File tidak dapat diakses: Object not found');
+      }
       throw new Error('Gagal membuat URL preview');
     }
 
@@ -887,7 +902,7 @@ router.get('/preview/:id', verifyToken, async (req, res) => {
 
   } catch (error) {
     console.error('Preview error:', error);
-    res.status(error.message.includes('akses') ? 403 : 500).json({
+    res.status(error.message.includes('tidak ditemukan') ? 404 : 500).json({
       success: false,
       error: error.message || 'Gagal mendapatkan preview file'
     });
