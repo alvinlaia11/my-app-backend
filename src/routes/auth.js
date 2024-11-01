@@ -23,21 +23,16 @@ router.post('/signin', async (req, res) => {
     });
 
     if (error) {
-      console.log('Supabase auth error:', error);
-      if (error.message === 'Invalid login credentials') {
-        return res.status(401).json({
-          success: false,
-          error: 'Email atau password salah'
-        });
-      }
-      throw error;
+      console.error('Supabase auth error:', error);
+      return res.status(401).json({
+        success: false,
+        error: error.message
+      });
     }
 
     if (!data?.user) {
       throw new Error('User data tidak ditemukan');
     }
-
-    console.log('Login success:', { user: data.user });
 
     res.json({
       success: true,
@@ -341,9 +336,16 @@ router.get('/profile', verifyToken, async (req, res) => {
 // POST /api/auth/verify
 router.post('/verify', verifyToken, async (req, res) => {
   try {
+    const { data: session } = await supabase.auth.getSession();
+    
+    if (!session) {
+      throw new Error('Invalid session');
+    }
+
     res.json({
       success: true,
-      user: req.user
+      user: req.user,
+      session: session.data.session
     });
   } catch (error) {
     console.error('Token verification error:', error);
@@ -407,32 +409,36 @@ router.post('/login', async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Email dan password harus diisi'
+        error: 'Email dan password harus diisi'
       });
     }
 
-    const { data: user, error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
     });
 
-    if (error) throw error;
+    if (error) {
+      return res.status(401).json({
+        success: false,
+        error: 'Email atau password salah'
+      });
+    }
 
     const session = await supabase.auth.getSession();
-    const upcomingSchedules = await checkUpcomingSchedules(user.id);
-
+    
     res.json({
       success: true,
-      user,
+      user: data.user,
       session: session.data.session,
-      upcomingSchedules
+      token: session.data.session?.access_token
     });
 
   } catch (error) {
     console.error('Login error:', error);
-    res.status(401).json({
+    res.status(500).json({
       success: false,
-      message: error.message || 'Email atau password salah'
+      error: 'Gagal melakukan login: ' + error.message
     });
   }
 });

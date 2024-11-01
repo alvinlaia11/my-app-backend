@@ -1,44 +1,56 @@
-const setupServer = require('./server-setup');
+const express = require('express');
+const cors = require('cors');
+const fileUpload = require('express-fileupload');
+const path = require('path');
 
-const app = setupServer();
-let routesInitialized = false;
+const authRouter = require('./routes/auth');
+const filesRouter = require('./routes/files');
+const foldersRouter = require('./routes/folders');
+const casesRouter = require('./routes/cases');
+const notificationsRouter = require('./routes/notifications');
+const userRouter = require('./routes/user');
 
-// Start server first
-const PORT = process.env.PORT || 5000;
-const server = app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on port ${PORT}`);
+const app = express();
+
+// Middleware
+app.use(express.json());
+app.use(fileUpload());
+app.use(cors({
+  origin: [
+    "http://localhost:3000",
+    "https://my-app-frontend-production-e401.up.railway.app",
+    "https://my-app-backend-production-15df.up.railway.app"
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+}));
+
+// Health check endpoint
+app.get('/', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    timestamp: new Date().toISOString()
+  });
 });
 
-// Initialize routes after server is running
-setTimeout(async () => {
-  if (!routesInitialized) {
-    try {
-      const authRouter = require('./routes/auth');
-      const casesRouter = require('./routes/cases');
-      const notificationsRouter = require('./routes/notifications');
-      const userRouter = require('./routes/user');
-      const filesRouter = require('./routes/files');
-      const foldersRouter = require('./routes/folders');
+// Routes
+app.use('/api/auth', authRouter);
+app.use('/api/files', filesRouter);
+app.use('/api/folders', foldersRouter);
+app.use('/api/cases', casesRouter);
+app.use('/api/notifications', notificationsRouter);
+app.use('/api/user', userRouter);
 
-      app.use('/api/auth', authRouter);
-      app.use('/api/cases', casesRouter);
-      app.use('/api/notifications', notificationsRouter);
-      app.use('/api/user', userRouter);
-      app.use('/api/files', filesRouter);
-      app.use('/api/folders', foldersRouter);
-
-      routesInitialized = true;
-      console.log('Routes initialized successfully');
-    } catch (error) {
-      console.error('Failed to initialize routes:', error);
-    }
-  }
-}, 1000);
-
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  server.close(() => {
-    console.log('Server shut down gracefully');
-    process.exit(0);
+// Error handling
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({
+    success: false,
+    error: 'Internal Server Error'
   });
+});
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
