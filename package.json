@@ -6,9 +6,9 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "start": "node --max-old-space-size=512 src/server.js",
-    "dev": "nodemon --max-old-space-size=512 src/server.js",
-    "build": "npm install"
+    "start": "node server.js",
+    "dev": "react-scripts start",
+    "build": "react-scripts build"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.46.0",

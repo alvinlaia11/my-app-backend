@@ -36,6 +36,10 @@ app.use((req, res, next) => {
   next();
 });
 
+app.get('/health', (req, res) => {
+  res.status(200).send('OK');
+});
+
 app.use('/api/auth', authRouter);
 app.use('/api/cases', casesRouter);
 app.use('/api/notifications', notificationsRouter);
@@ -58,16 +62,8 @@ app.use('/api/folders', foldersRouter);
 app.use(express.static(path.join(__dirname, '../../my-app/build')));
 
 // Fallback route untuk client-side routing
-app.get('*', (req, res, next) => {
-  if (req.path.startsWith('/api')) {
-    return next();
-  }
+app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../../my-app/build', 'index.html'));
-});
-
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).send('OK');
 });
 
 // Test connection endpoint
@@ -147,7 +143,7 @@ const moment = require('moment-timezone');
 moment.tz.setDefault('Asia/Jakarta');
 
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
   console.log('Server URL:', process.env.NODE_ENV === 'production' 
     ? 'https://my-app-frontend-production-e401.up.railway.app' 
