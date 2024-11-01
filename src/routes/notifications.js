@@ -110,48 +110,54 @@ router.put('/read/:id', verifyToken, async (req, res) => {
   }
 });
 
-router.post('/test-scheduler', verifyToken, async (req, res) => {
+router.patch('/:notificationId/read', verifyToken, async (req, res) => {
   try {
+    const { notificationId } = req.params;
     const userId = req.user.userId;
-    const now = new Date();
-    const testDate = new Date(now.getTime() + 1 * 60000); // 1 menit dari sekarang
-    
-    const notification = await createScheduledNotification(
-      userId,
-      "Test notification - akan muncul dalam 1 menit",
-      testDate.toISOString()
-    );
+
+    const { data, error } = await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .match({ id: notificationId, user_id: userId });
+
+    if (error) throw error;
 
     res.json({
       success: true,
-      message: 'Test notification created',
-      data: notification
+      message: 'Notifikasi telah ditandai sebagai dibaca'
     });
+
   } catch (error) {
+    console.error('Error updating notification:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to create test notification'
+      error: 'Gagal mengupdate notifikasi'
     });
   }
 });
 
-router.get('/test-connection', verifyToken, async (req, res) => {
+router.delete('/:notificationId', verifyToken, async (req, res) => {
   try {
+    const { notificationId } = req.params;
+    const userId = req.user.userId;
+
     const { data, error } = await supabase
       .from('notifications')
-      .select('count')
-      .limit(1);
-      
+      .delete()
+      .match({ id: notificationId, user_id: userId });
+
+    if (error) throw error;
+
     res.json({
       success: true,
-      dbConnection: error ? 'Failed' : 'Success',
-      scheduler: 'Running',
-      timestamp: new Date().toISOString()
+      message: 'Notifikasi telah dihapus'
     });
+
   } catch (error) {
+    console.error('Error deleting notification:', error);
     res.status(500).json({
       success: false,
-      error: 'Connection test failed'
+      error: 'Gagal menghapus notifikasi'
     });
   }
 });

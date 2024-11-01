@@ -339,4 +339,20 @@ router.get('/profile', verifyToken, async (req, res) => {
   }
 });
 
+// POST /api/auth/verify
+router.post('/verify', verifyToken, async (req, res) => {
+  try {
+    res.json({
+      success: true,
+      user: req.user
+    });
+  } catch (error) {
+    console.error('Token verification error:', error);
+    res.status(401).json({
+      success: false,
+      error: 'Token tidak valid'
+    });
+  }
+});
+
 module.exports = router;
