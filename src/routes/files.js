@@ -826,8 +826,9 @@ router.get('/preview/:id', verifyToken, async (req, res) => {
     // Dapatkan data file dari database
     const { data: file, error } = await supabase
       .from('files')
-      .select('*')
+      .select('filename, original_name, path, mime_type, file_url')
       .eq('id', id)
+      .eq('user_id', userId)
       .single();
       
     if (error) {
@@ -842,14 +843,6 @@ router.get('/preview/:id', verifyToken, async (req, res) => {
     // Log data file untuk debugging
     console.log('File data:', file);
 
-    // Validasi kelengkapan data
-    const requiredFields = ['filename', 'path', 'mime_type'];
-    const missingFields = requiredFields.filter(field => !file[field]);
-    
-    if (missingFields.length > 0) {
-      throw new Error(`Data file tidak lengkap: ${missingFields.join(', ')} tidak ditemukan`);
-    }
-
     // Pastikan file adalah gambar
     const imageTypes = ['image/jpeg', 'image/png', 'image/gif'];
     if (!imageTypes.includes(file.mime_type)) {
@@ -857,26 +850,10 @@ router.get('/preview/:id', verifyToken, async (req, res) => {
     }
 
     // Buat path file yang benar sesuai dengan struktur upload
-    const filePath = `${userId}/${file.path}/${file.filename}`.replace(/\/+/g, '/');
+    const storagePath = file.path ? `${userId}/${file.path}/${file.filename}` : `${userId}/${file.filename}`;
+    const filePath = storagePath.replace(/\/+/g, '/');
     
-    console.log('Checking file existence in storage:', filePath);
-
-    // Cek keberadaan file di storage
-    const { data: existsData, error: existsError } = await supabase.storage
-      .from('files')
-      .list(filePath.split('/').slice(0, -1).join('/'));
-
-    if (existsError) {
-      console.error('Storage list error:', existsError);
-      throw new Error('Gagal memeriksa keberadaan file');
-    }
-
-    const fileExists = existsData.some(item => item.name === file.filename);
-    if (!fileExists) {
-      throw new Error('File tidak ditemukan di storage');
-    }
-
-    console.log('Generating signed URL for path:', filePath);
+    console.log('Storage path:', filePath);
 
     // Generate signed URL dengan error handling yang lebih baik
     const { data: urlData, error: signError } = await supabase.storage
