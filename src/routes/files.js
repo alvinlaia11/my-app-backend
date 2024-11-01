@@ -826,7 +826,7 @@ router.get('/preview/:id', verifyToken, async (req, res) => {
     // Dapatkan data file dari database
     const { data: file, error } = await supabase
       .from('files')
-      .select('filename, original_name, path, mime_type, file_url')
+      .select('*') // Ambil semua data untuk keperluan download/delete
       .eq('id', id)
       .eq('user_id', userId)
       .single();
@@ -874,7 +874,13 @@ router.get('/preview/:id', verifyToken, async (req, res) => {
 
     res.json({
       success: true,
-      url: urlData.signedUrl
+      url: urlData.signedUrl,
+      file: {
+        id: file.id,
+        name: file.original_name,
+        path: filePath,
+        mime_type: file.mime_type
+      }
     });
 
   } catch (error) {
