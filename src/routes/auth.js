@@ -3,6 +3,7 @@ const router = express.Router();
 const { supabase, supabaseAdmin } = require('../config/supabase');
 const { verifyToken, verifyAdmin } = require('../middleware/auth');
 const crypto = require('crypto');
+const { createScheduleNotification } = require('../services/notificationService');
 
 // POST /api/auth/signin
 router.post('/signin', async (req, res) => {
@@ -352,6 +353,60 @@ router.post('/verify', verifyToken, async (req, res) => {
       success: false,
       error: 'Token tidak valid'
     });
+  }
+});
+
+// Tambahkan fungsi ini setelah user berhasil login
+const checkUpcomingSchedules = async (userId) => {
+  try {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+
+    const { data: cases, error } = await supabase
+      .from('cases')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('notification_sent', false)
+      .gte('date', tomorrow.toISOString())
+      .lt('date', new Date(tomorrow.getTime() + 86400000).toISOString());
+
+    if (error) throw error;
+
+    for (const caseData of cases) {
+      await createScheduleNotification(userId, caseData);
+      
+      // Update status notifikasi
+      await supabase
+        .from('cases')
+        .update({ notification_sent: true })
+        .eq('id', caseData.id);
+    }
+
+    return cases.length;
+  } catch (error) {
+    console.error('Error checking upcoming schedules:', error);
+    return 0;
+  }
+};
+
+// Modifikasi endpoint login untuk menambahkan pengecekan jadwal
+router.post('/login', async (req, res) => {
+  try {
+    // ... kode login yang sudah ada ...
+
+    // Setelah login berhasil, cek jadwal
+    const upcomingSchedules = await checkUpcomingSchedules(user.id);
+
+    res.json({
+      success: true,
+      user,
+      session,
+      upcomingSchedules
+    });
+
+  } catch (error) {
+    // ... error handling yang sudah ada ...
   }
 });
 

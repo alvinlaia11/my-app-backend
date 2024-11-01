@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { verifyToken } = require('../middleware/auth');
 const { supabase } = require('../config/supabase');
+const { createScheduleNotification } = require('../services/notificationService');
 
 // GET /api/cases/:id
 router.get('/:id', verifyToken, async (req, res) => {
@@ -135,7 +136,7 @@ router.post('/', verifyToken, async (req, res) => {
     }
 
     // Insert ke database
-    const { data, error } = await supabase
+    const { data: newCase, error } = await supabase
       .from('cases')
       .insert({
         title,
@@ -152,9 +153,25 @@ router.post('/', verifyToken, async (req, res) => {
 
     if (error) throw error;
 
+    // Cek apakah jadwal besok
+    const scheduleDate = new Date(date);
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    if (scheduleDate.toDateString() === tomorrow.toDateString()) {
+      // Buat notifikasi setelah 10 detik
+      setTimeout(async () => {
+        try {
+          await createScheduleNotification(userId, newCase);
+        } catch (err) {
+          console.error('Error creating notification:', err);
+        }
+      }, 10000);
+    }
+
     res.json({
       success: true,
-      data: data
+      data: newCase
     });
 
   } catch (error) {

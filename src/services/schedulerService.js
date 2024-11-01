@@ -1,7 +1,42 @@
 const cron = require('node-cron');
 const { supabase } = require('../config/supabase');
-const { sendNotification } = require('./notificationService');
+const { sendNotification, createScheduleNotification } = require('./notificationService');
 const moment = require('moment');
+
+const checkUpcomingSchedules = async () => {
+  try {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    
+    const endOfTomorrow = new Date(tomorrow);
+    endOfTomorrow.setHours(23, 59, 59, 999);
+
+    const { data: cases, error } = await supabase
+      .from('cases')
+      .select('*')
+      .eq('notification_sent', false)
+      .gte('date', tomorrow.toISOString())
+      .lte('date', endOfTomorrow.toISOString());
+
+    if (error) throw error;
+
+    for (const caseData of cases) {
+      await createScheduleNotification(caseData.user_id, caseData);
+      
+      // Update status notifikasi
+      await supabase
+        .from('cases')
+        .update({ notification_sent: true })
+        .eq('id', caseData.id);
+    }
+
+    return cases.length;
+  } catch (error) {
+    console.error('Error checking upcoming schedules:', error);
+    return 0;
+  }
+};
 
 const initializeScheduler = () => {
   console.log('Starting scheduler with config:', {
@@ -10,51 +45,7 @@ const initializeScheduler = () => {
   });
 
   cron.schedule('*/30 * * * * *', async () => {
-    try {
-      const jakartaTime = moment().tz('Asia/Jakarta');
-      
-      console.log('\n=== Scheduler Check ===');
-      console.log('Current Jakarta time:', jakartaTime.format('YYYY-MM-DD HH:mm:ss'));
-      
-      console.log('Checking for notifications scheduled before:', jakartaTime.format('YYYY-MM-DD HH:mm:ss'));
-      
-      const { data: notifications, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('is_sent', false)
-        .lte('schedule_date', jakartaTime.format('YYYY-MM-DD HH:mm:ss'));
-
-      if (error) throw error;
-
-      console.log('Raw notifications found:', notifications);
-      console.log(`Found ${notifications?.length || 0} pending notifications`);
-
-      if (notifications?.length > 0) {
-        for (const notif of notifications) {
-          console.log('Processing notification:', {
-            id: notif.id,
-            schedule_date: notif.schedule_date,
-            current_time: jakartaTime.format('YYYY-MM-DD HH:mm:ss')
-          });
-          
-          await sendNotification(notif.user_id, {
-            message: notif.message,
-            type: 'reminder'
-          });
-          
-          await supabase
-            .from('notifications')
-            .update({ 
-              is_sent: true,
-              sent_at: jakartaTime.format('YYYY-MM-DD HH:mm:ss')
-            })
-            .eq('id', notif.id)
-            .eq('user_id', notif.user_id);
-        }
-      }
-    } catch (err) {
-      console.error('Scheduler error:', err);
-    }
+    await checkUpcomingSchedules();
   });
 };
 
