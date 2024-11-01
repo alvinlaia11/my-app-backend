@@ -40,7 +40,7 @@ const createScheduleNotification = async (userId, caseData) => {
       .insert([
         {
           user_id: userId,
-          message: `Pengingat: Jadwal "${caseData.title}" akan berlangsung besok pada ${new Date(caseData.date).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`,
+          message: `Pengingat: Jadwal "${caseData.title}" akan berlangsung besok pada ${new Date(caseData.date).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} <span style="color: ${getCategoryColor(caseData.type)}; font-weight: bold; padding: 2px 8px; border-radius: 4px; background-color: ${getCategoryColor(caseData.type)}20;">${caseData.type}</span>`,
           type: 'schedule_reminder',
           is_read: false,
           case_id: caseData.id
@@ -79,4 +79,19 @@ const markAllAsRead = async (userId) => {
   }
 };
 
-module.exports = { createNotification, createScheduleNotification, markAllAsRead }; 
+const getCategoryColor = (type) => {
+  switch (type.toLowerCase()) {
+    case 'penyelidikan':
+      return '#4caf50';
+    case 'penyidikan':
+      return '#2196f3';
+    case 'penuntutan':
+      return '#ff9800';
+    case 'eksekusi':
+      return '#f44336';
+    default:
+      return '#757575';
+  }
+};
+
+module.exports = { createNotification, createScheduleNotification, markAllAsRead, getCategoryColor }; 
