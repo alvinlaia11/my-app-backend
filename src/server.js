@@ -20,14 +20,11 @@ app.use(express.json());
 app.use(cors({
   origin: [
     "http://localhost:3000",
-    "http://localhost:3002",
     "https://my-app-frontend-production.up.railway.app",
-    "https://my-app-backend-production-15df.up.railway.app",
-    "https://my-app-backend-production-ad9e.up.railway.app"
+    "https://my-app-backend-production-15df.up.railway.app"
   ],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  exposedHeaders: ['Authorization'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));
 
