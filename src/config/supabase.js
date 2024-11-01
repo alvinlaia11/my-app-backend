@@ -17,8 +17,8 @@ if (!supabaseUrl || !supabaseKey || !supabaseServiceRoleKey) {
 const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
     autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true
+    persistSession: false,
+    detectSessionInUrl: false
   },
   global: {
     headers: { 'x-application-name': 'kejaksaan-app' },
@@ -27,9 +27,9 @@ const supabase = createClient(supabaseUrl, supabaseKey, {
     schema: 'public'
   },
   realtime: {
-    timeout: 20000,
+    timeout: 5000,
     params: {
-      eventsPerSecond: 10
+      eventsPerSecond: 1
     }
   },
   dangerouslyAllowBrowser: true

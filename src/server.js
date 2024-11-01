@@ -20,8 +20,10 @@ app.use(express.json());
 app.use(cors({
   origin: [
     "http://localhost:3000",
+    "http://localhost:5000",
     "https://my-app-frontend-production-e401.up.railway.app",
-    "https://my-app-backend-production-15df.up.railway.app"
+    "http://my-app-frontend-production-e401.up.railway.app:8080",
+    "http://my-app-frontend-production-e401.up.railway.app:5000"
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -52,29 +54,20 @@ app.use(fileUpload({
 app.use('/api/files', filesRouter);
 app.use('/api/folders', foldersRouter);
 
+// Serve static files
+app.use(express.static(path.join(__dirname, '../../my-app/build')));
+
+// Fallback route untuk client-side routing
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api')) {
+    return next();
+  }
+  res.sendFile(path.join(__dirname, '../../my-app/build', 'index.html'));
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
-  try {
-    console.log('Health check requested from:', req.headers.origin);
-    res.json({ 
-      status: 'OK', 
-      timestamp: new Date().toISOString(),
-      env: process.env.NODE_ENV,
-      port: process.env.PORT,
-      supabase_url: process.env.SUPABASE_URL,
-      allowed_origins: [
-        "http://localhost:3000",
-        "https://my-app-frontend-production-e401.up.railway.app",
-        "https://my-app-backend-production-15df.up.railway.app"
-      ]
-    });
-  } catch (error) {
-    console.error('Health check error:', error);
-    res.status(500).json({
-      status: 'ERROR',
-      error: error.message
-    });
-  }
+  res.status(200).send('OK');
 });
 
 // Test connection endpoint
@@ -94,7 +87,7 @@ app.get('/test-connection', async (req, res) => {
       CORS_ORIGINS: [
         "http://localhost:3000",
         "https://my-app-frontend-production-e401.up.railway.app",
-        "https://my-app-backend-production-15df.up.railway.app"
+        "http://my-app-frontend-production-e401.up.railway.app:8080"
       ]
     };
 
@@ -127,6 +120,14 @@ app.get('/test-connection', async (req, res) => {
   }
 });
 
+// Tambahkan sebelum error handling middleware
+app.use((req, res, next) => {
+  res.status(404).json({
+    success: false,
+    error: 'Route not found'
+  });
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Error:', err);
@@ -148,7 +149,12 @@ moment.tz.setDefault('Asia/Jakarta');
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-  console.log('Initializing scheduler...');
+  console.log('Server URL:', process.env.NODE_ENV === 'production' 
+    ? 'https://my-app-frontend-production-e401.up.railway.app' 
+    : `http://localhost:${PORT}`
+  );
   initializeScheduler();
-  console.log('Server startup complete');
+}).on('error', (error) => {
+  console.error('Server failed to start:', error);
+  process.exit(1);
 });

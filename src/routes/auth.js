@@ -404,20 +404,38 @@ const checkUpcomingSchedules = async (userId) => {
 // Modifikasi endpoint login untuk menambahkan pengecekan jadwal
 router.post('/login', async (req, res) => {
   try {
-    // ... kode login yang sudah ada ...
+    const { email, password } = req.body;
+    
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email dan password harus diisi'
+      });
+    }
 
-    // Setelah login berhasil, cek jadwal
+    const { data: user, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (error) throw error;
+
+    const session = await supabase.auth.getSession();
     const upcomingSchedules = await checkUpcomingSchedules(user.id);
 
     res.json({
       success: true,
       user,
-      session,
+      session: session.data.session,
       upcomingSchedules
     });
 
   } catch (error) {
-    // ... error handling yang sudah ada ...
+    console.error('Login error:', error);
+    res.status(401).json({
+      success: false,
+      message: error.message || 'Email atau password salah'
+    });
   }
 });
 
