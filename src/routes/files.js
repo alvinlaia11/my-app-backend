@@ -821,12 +821,10 @@ router.get('/preview/:id', verifyToken, async (req, res) => {
     const { id } = req.params;
     const userId = req.user.userId;
     
-    console.log('Fetching file with ID:', id, 'for user:', userId);
-    
     // Dapatkan data file dari database
     const { data: file, error } = await supabase
       .from('files')
-      .select('filename, original_name, path, mime_type, file_url')
+      .select('*')
       .eq('id', id)
       .eq('user_id', userId)
       .single();
@@ -840,41 +838,34 @@ router.get('/preview/:id', verifyToken, async (req, res) => {
       throw new Error('File tidak ditemukan');
     }
 
-    // Log data file untuk debugging
-    console.log('File data:', file);
-
     // Pastikan file adalah gambar
     const imageTypes = ['image/jpeg', 'image/png', 'image/gif'];
     if (!imageTypes.includes(file.mime_type)) {
       throw new Error('File bukan gambar');
     }
 
-    // Buat path file yang benar sesuai dengan struktur upload
-    const storagePath = file.path ? `${userId}/${file.path}/${file.filename}` : `${userId}/${file.filename}`;
-    const filePath = storagePath.replace(/\/+/g, '/');
+    // Buat path file
+    const filePath = `${userId}/${file.path}/${file.filename}`.replace(/\/+/g, '/');
     
-    console.log('Storage path:', filePath);
+    // Generate signed URL untuk preview dan download
+    const [previewUrl, downloadUrl] = await Promise.all([
+      supabase.storage.from('files').createSignedUrl(filePath, 300),
+      supabase.storage.from('files').createSignedUrl(filePath, 60, {
+        download: true,
+        filename: file.original_name
+      })
+    ]);
 
-    // Generate signed URL dengan error handling yang lebih baik
-    const { data: urlData, error: signError } = await supabase.storage
-      .from('files')
-      .createSignedUrl(filePath, 300);
-
-    if (signError) {
-      console.error('Signed URL error:', signError);
-      if (signError.status === 400) {
-        throw new Error('File tidak dapat diakses: Object not found');
-      }
-      throw new Error('Gagal membuat URL preview');
-    }
-
-    if (!urlData?.signedUrl) {
-      throw new Error('URL preview tidak valid');
+    if (previewUrl.error || downloadUrl.error) {
+      throw new Error('Gagal membuat URL');
     }
 
     res.json({
       success: true,
-      url: urlData.signedUrl
+      url: previewUrl.data.signedUrl,
+      downloadUrl: downloadUrl.data.signedUrl,
+      filename: file.original_name,
+      id: file.id
     });
 
   } catch (error) {
