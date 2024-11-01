@@ -5,6 +5,15 @@ const fileUpload = require('express-fileupload');
 
 const app = express();
 
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({
+    status: 'error',
+    message: 'Something broke!'
+  });
+});
+
 // Import routers
 const authRouter = require('./routes/auth');
 const casesRouter = require('./routes/cases');
@@ -25,13 +34,26 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
 }));
 
+// Basic route untuk memastikan server berjalan
+app.get('/', (req, res) => {
+  res.json({ message: 'Server is running' });
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'OK',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime()
-  });
+  try {
+    res.status(200).json({
+      status: 'OK',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime()
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Something broke!'
+    });
+  }
 });
 
 // API routes
