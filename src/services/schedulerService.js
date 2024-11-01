@@ -21,25 +21,13 @@ const checkUpcomingSchedules = async () => {
 
     if (error) throw error;
 
+    let notificationCount = 0;
     for (const caseData of cases) {
-      const { data: existingNotif, error: notifError } = await supabase
-        .from('notifications')
-        .select('id')
-        .eq('case_id', caseData.id)
-        .eq('type', 'schedule_reminder')
-        .single();
-
-      if (notifError && !existingNotif) {
-        await createScheduleNotification(caseData.user_id, caseData);
-        
-        await supabase
-          .from('cases')
-          .update({ notification_sent: true })
-          .eq('id', caseData.id);
-      }
+      const notification = await createScheduleNotification(caseData.user_id, caseData);
+      if (notification) notificationCount++;
     }
 
-    return cases.length;
+    return notificationCount;
   } catch (error) {
     console.error('Error checking upcoming schedules:', error);
     return 0;

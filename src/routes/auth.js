@@ -362,28 +362,39 @@ const checkUpcomingSchedules = async (userId) => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     tomorrow.setHours(0, 0, 0, 0);
+    
+    const endOfTomorrow = new Date(tomorrow);
+    endOfTomorrow.setHours(23, 59, 59, 999);
 
+    // Ambil jadwal besok yang belum dinotifikasi
     const { data: cases, error } = await supabase
       .from('cases')
       .select('*')
       .eq('user_id', userId)
       .eq('notification_sent', false)
       .gte('date', tomorrow.toISOString())
-      .lt('date', new Date(tomorrow.getTime() + 86400000).toISOString());
+      .lte('date', endOfTomorrow.toISOString());
 
     if (error) throw error;
 
+    // Proses setiap jadwal
+    const notifications = [];
     for (const caseData of cases) {
-      await createScheduleNotification(userId, caseData);
-      
-      // Update status notifikasi
-      await supabase
-        .from('cases')
-        .update({ notification_sent: true })
-        .eq('id', caseData.id);
+      // Cek apakah notifikasi sudah ada
+      const { data: existingNotif } = await supabase
+        .from('notifications')
+        .select('id')
+        .eq('case_id', caseData.id)
+        .eq('type', 'schedule_reminder')
+        .single();
+
+      if (!existingNotif) {
+        const notification = await createScheduleNotification(userId, caseData);
+        notifications.push(notification);
+      }
     }
 
-    return cases.length;
+    return notifications.length;
   } catch (error) {
     console.error('Error checking upcoming schedules:', error);
     return 0;
