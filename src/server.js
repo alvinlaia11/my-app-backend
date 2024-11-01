@@ -37,6 +37,12 @@ app.get('/health', (req, res) => {
   res.status(200).send('OK');
 });
 
+// File upload middleware sebelum route handlers
+app.use(fileUpload({
+  limits: { fileSize: 50 * 1024 * 1024 },
+}));
+
+// API routes
 app.use('/api/auth', authRouter);
 app.use('/api/cases', casesRouter);
 app.use('/api/notifications', notificationsRouter);
@@ -45,11 +51,15 @@ app.use('/api/files', filesRouter);
 app.use('/api/folders', foldersRouter);
 
 // Static file handling
-app.use('/', express.static(path.join(__dirname, '../build')));
+app.use(express.static(path.join(__dirname, '../../my-app/build')));
 
 // Fallback route untuk React app
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../build/index.html'));
+  const indexPath = path.join(__dirname, '../../my-app/build/index.html');
+  if (!require('fs').existsSync(indexPath)) {
+    return res.status(404).send('Frontend build not found. Please run npm run build in frontend directory');
+  }
+  res.sendFile(indexPath);
 });
 
 // Test connection endpoint
