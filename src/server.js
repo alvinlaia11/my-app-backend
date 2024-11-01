@@ -1,34 +1,44 @@
-const express = require('express');
-const cors = require('cors');
+const setupServer = require('./server-setup');
 
-const app = express();
-
-// Basic middleware
-app.use(express.json());
-app.use(cors());
-
-// Simple health check
-app.get('/', (_, res) => res.sendStatus(200));
+const app = setupServer();
+let routesInitialized = false;
 
 // Start server first
 const PORT = process.env.PORT || 5000;
 const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
-  
-  // Setup routes after server is running
-  try {
-    app.use('/api/auth', require('./routes/auth'));
-    app.use('/api/cases', require('./routes/cases'));
-    app.use('/api/notifications', require('./routes/notifications'));
-    app.use('/api/user', require('./routes/user'));
-    app.use('/api/files', require('./routes/files'));
-    app.use('/api/folders', require('./routes/folders'));
-  } catch (error) {
-    console.error('Error setting up routes:', error);
-  }
 });
 
-// Handle shutdown
+// Initialize routes after server is running
+setTimeout(async () => {
+  if (!routesInitialized) {
+    try {
+      const authRouter = require('./routes/auth');
+      const casesRouter = require('./routes/cases');
+      const notificationsRouter = require('./routes/notifications');
+      const userRouter = require('./routes/user');
+      const filesRouter = require('./routes/files');
+      const foldersRouter = require('./routes/folders');
+
+      app.use('/api/auth', authRouter);
+      app.use('/api/cases', casesRouter);
+      app.use('/api/notifications', notificationsRouter);
+      app.use('/api/user', userRouter);
+      app.use('/api/files', filesRouter);
+      app.use('/api/folders', foldersRouter);
+
+      routesInitialized = true;
+      console.log('Routes initialized successfully');
+    } catch (error) {
+      console.error('Failed to initialize routes:', error);
+    }
+  }
+}, 1000);
+
+// Graceful shutdown
 process.on('SIGTERM', () => {
-  server.close(() => process.exit(0));
+  server.close(() => {
+    console.log('Server shut down gracefully');
+    process.exit(0);
+  });
 });
