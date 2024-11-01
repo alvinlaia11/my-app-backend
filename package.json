@@ -6,7 +6,7 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "start": "node src/server.js",
+    "start": "NODE_ENV=production node src/server.js",
     "dev": "nodemon src/server.js"
   },
   "dependencies": {

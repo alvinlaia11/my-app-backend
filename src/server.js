@@ -87,7 +87,26 @@ app.use('/api/user', userRouter);
 app.use('/api/files', filesRouter);
 app.use('/api/folders', foldersRouter);
 
+// Error handler harus berada setelah semua routes
+app.use((err, req, res, next) => {
+  console.error('Global error:', err);
+  res.status(500).json({
+    status: 'error',
+    message: err.message || 'Internal server error'
+  });
+});
+
+// Start server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down...');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
 });
