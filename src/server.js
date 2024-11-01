@@ -20,9 +20,11 @@ app.use(express.json());
 app.use(cors({
   origin: [
     "http://localhost:3000",
-    "https://my-app-frontend-production-e401.up.railway.app"
+    "https://my-app-frontend-production-e401.up.railway.app",
+    "https://my-app-backend-production-15df.up.railway.app"
   ],
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
 }));
 
 // Middleware untuk logging requests
@@ -43,7 +45,7 @@ app.use('/api/files', filesRouter);
 app.use('/api/folders', foldersRouter);
 
 // Static file handling
-app.use(express.static(path.join(__dirname, '../build')));
+app.use('/', express.static(path.join(__dirname, '../build')));
 
 // Fallback route untuk React app
 app.get('*', (req, res) => {
