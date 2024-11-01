@@ -3,8 +3,8 @@ builder = "nixpacks"
 
 [deploy]
 startCommand = "node src/server.js"
-healthcheckPath = "/"
-healthcheckTimeout = 1
-healthcheckInterval = "1s"
+healthcheckPath = "/api/health"
+healthcheckTimeout = 10
+healthcheckInterval = "30s"
 restartPolicy = "on-failure"
-maxRetries = 3 
+maxRetries = 5 

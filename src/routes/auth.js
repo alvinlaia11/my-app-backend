@@ -10,6 +10,8 @@ router.post('/signin', async (req, res) => {
   try {
     const { email, password } = req.body;
     
+    console.log('Signin attempt:', { email });
+    
     if (!email || !password) {
       return res.status(400).json({
         success: false,
@@ -23,28 +25,28 @@ router.post('/signin', async (req, res) => {
     });
 
     if (error) {
-      console.error('Supabase auth error:', error);
+      console.error('Signin error:', error);
       return res.status(401).json({
         success: false,
-        error: error.message
+        error: 'Email atau password salah'
       });
     }
 
-    if (!data?.user) {
-      throw new Error('User data tidak ditemukan');
-    }
+    // Get session after successful login
+    const { data: session } = await supabase.auth.getSession();
 
     res.json({
       success: true,
-      session: data.session,
-      user: data.user
+      user: data.user,
+      session: session.session,
+      token: session.session?.access_token
     });
 
   } catch (error) {
-    console.error('Sign in error:', error);
-    res.status(401).json({
+    console.error('Signin error:', error);
+    res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Gagal melakukan login: ' + error.message
     });
   }
 });
