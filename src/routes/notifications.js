@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { supabase } = require('../config/supabase');
 const { verifyToken } = require('../middleware/auth');
-const { createScheduledNotification } = require('../services/notificationService');
+const { createScheduledNotification, markAllAsRead } = require('../services/notificationService');
 
 router.get('/', verifyToken, async (req, res) => {
   try {
@@ -158,6 +158,24 @@ router.delete('/:notificationId', verifyToken, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Gagal menghapus notifikasi'
+    });
+  }
+});
+
+router.put('/read-all', verifyToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    await markAllAsRead(userId);
+
+    res.json({
+      success: true,
+      message: 'Semua notifikasi telah ditandai sebagai dibaca'
+    });
+  } catch (error) {
+    console.error('Error marking all notifications as read:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Gagal mengupdate notifikasi'
     });
   }
 });

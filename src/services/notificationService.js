@@ -43,4 +43,20 @@ const createScheduleNotification = async (userId, caseData) => {
   }
 };
 
-module.exports = { createNotification, createScheduleNotification }; 
+const markAllAsRead = async (userId) => {
+  try {
+    const { data, error } = await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('user_id', userId)
+      .eq('is_read', false);
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error marking all notifications as read:', error);
+    throw error;
+  }
+};
+
+module.exports = { createNotification, createScheduleNotification, markAllAsRead }; 
