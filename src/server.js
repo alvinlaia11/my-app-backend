@@ -27,7 +27,10 @@ app.use('/api/folders', foldersRouter);
 
 // Add after API routes
 app.get('/health', (req, res) => {
-  res.status(200).send('OK');
+  res.status(200).json({
+    status: 'OK',
+    timestamp: new Date().toISOString()
+  });
 });
 
 const PORT = process.env.PORT || 5000;
