@@ -128,10 +128,14 @@ router.post('/upload', verifyToken, async (req, res) => {
 router.delete('/:id', verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const { type } = req.body;
     const userId = req.user.userId;
 
-    console.log('Delete request:', { id, type, userId });
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        error: 'ID file tidak valid'
+      });
+    }
 
     // Dapatkan informasi file sebelum dihapus
     const { data: file, error: fetchError } = await supabase
@@ -141,7 +145,11 @@ router.delete('/:id', verifyToken, async (req, res) => {
       .eq('user_id', userId)
       .single();
 
-    if (fetchError) throw fetchError;
+    if (fetchError) {
+      console.error('Fetch error:', fetchError);
+      throw new Error('Gagal mengambil informasi file');
+    }
+
     if (!file) {
       return res.status(404).json({
         success: false,
@@ -155,7 +163,10 @@ router.delete('/:id', verifyToken, async (req, res) => {
       .from('files')
       .remove([filePath]);
 
-    if (storageError) throw storageError;
+    if (storageError) {
+      console.error('Storage error:', storageError);
+      throw new Error('Gagal menghapus file dari storage');
+    }
 
     // Hapus metadata dari database
     const { error: dbError } = await supabase
@@ -164,7 +175,10 @@ router.delete('/:id', verifyToken, async (req, res) => {
       .eq('id', id)
       .eq('user_id', userId);
 
-    if (dbError) throw dbError;
+    if (dbError) {
+      console.error('Database error:', dbError);
+      throw new Error('Gagal menghapus data');
+    }
 
     res.json({
       success: true,
