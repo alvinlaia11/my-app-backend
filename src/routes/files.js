@@ -823,23 +823,20 @@ router.get('/preview/:id', verifyToken, async (req, res) => {
     // Dapatkan data file dari database
     const { data: file, error } = await supabase
       .from('files')
-      .select('name, path, mimetype')
+      .select('filename, filepath, type')
       .eq('id', id)
       .single();
       
     if (error) throw error;
-    if (!file || !file.name || !file.path) {
+    if (!file || !file.filename || !file.filepath) {
       throw new Error('File tidak ditemukan atau data tidak lengkap');
     }
 
-    // Pastikan file adalah gambar berdasarkan mimetype
-    const imageTypes = [
-      'image/jpeg',
-      'image/png',
-      'image/gif'
-    ];
+    // Pastikan file adalah gambar berdasarkan ekstensi
+    const imageExtensions = ['jpg', 'jpeg', 'png', 'gif'];
+    const fileExtension = file.filename.split('.').pop();
     
-    if (!imageTypes.includes(file.mimetype)) {
+    if (!imageExtensions.includes(fileExtension)) {
       throw new Error('File bukan gambar');
     }
     
@@ -847,7 +844,7 @@ router.get('/preview/:id', verifyToken, async (req, res) => {
     const { data, error: signError } = await supabase
       .storage
       .from('files') // pastikan ini sesuai dengan bucket name di Supabase
-      .createSignedUrl(file.path, 60); // URL valid selama 60 detik
+      .createSignedUrl(file.filepath, 60); // URL valid selama 60 detik
       
     if (signError) throw signError;
     if (!data || !data.signedUrl) throw new Error('Gagal membuat signed URL');
