@@ -6,9 +6,8 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "start": "node server.js",
-    "dev": "react-scripts start",
-    "build": "react-scripts build"
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.46.0",
