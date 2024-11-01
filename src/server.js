@@ -77,6 +77,56 @@ app.get('/health', (req, res) => {
   }
 });
 
+// Test connection endpoint
+app.get('/test-connection', async (req, res) => {
+  try {
+    // Test Supabase connection
+    const { data: testData, error: supabaseError } = await supabase
+      .from('cases')
+      .select('count')
+      .limit(1);
+
+    // Test environment variables
+    const envCheck = {
+      NODE_ENV: process.env.NODE_ENV || 'not set',
+      PORT: process.env.PORT || 'not set',
+      SUPABASE_URL: process.env.SUPABASE_URL ? 'set' : 'not set',
+      CORS_ORIGINS: [
+        "http://localhost:3000",
+        "https://my-app-frontend-production-e401.up.railway.app",
+        "https://my-app-backend-production-15df.up.railway.app"
+      ]
+    };
+
+    res.json({
+      success: true,
+      timestamp: new Date().toISOString(),
+      environment: envCheck,
+      database: {
+        connected: !supabaseError,
+        error: supabaseError ? supabaseError.message : null
+      },
+      server: {
+        status: 'running',
+        uptime: process.uptime()
+      },
+      request: {
+        origin: req.headers.origin,
+        method: req.method,
+        path: req.path
+      }
+    });
+
+  } catch (error) {
+    console.error('Test connection error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Error:', err);
