@@ -125,35 +125,50 @@ router.post('/upload', verifyToken, async (req, res) => {
 });
 
 // DELETE endpoint untuk file
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const { type, path, filename } = req.body;
+    const { type } = req.body;
     const userId = req.user.userId;
 
-    if (type === 'folder') {
-      // Hapus folder
-      const { error } = await supabase
-        .from('folders')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', userId);
+    console.log('Delete request:', { id, type, userId });
 
-      if (error) throw error;
-    } else {
-      // Hapus file
-      const { error } = await supabase
-        .from('files')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', userId);
+    // Dapatkan informasi file sebelum dihapus
+    const { data: file, error: fetchError } = await supabase
+      .from('files')
+      .select('*')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .single();
 
-      if (error) throw error;
+    if (fetchError) throw fetchError;
+    if (!file) {
+      return res.status(404).json({
+        success: false,
+        error: 'File tidak ditemukan'
+      });
     }
+
+    // Hapus file dari storage
+    const filePath = `${userId}/${file.path}/${file.filename}`.replace(/\/+/g, '/');
+    const { error: storageError } = await supabase.storage
+      .from('files')
+      .remove([filePath]);
+
+    if (storageError) throw storageError;
+
+    // Hapus metadata dari database
+    const { error: dbError } = await supabase
+      .from('files')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId);
+
+    if (dbError) throw dbError;
 
     res.json({
       success: true,
-      message: `${type === 'folder' ? 'Folder' : 'File'} berhasil dihapus`
+      message: 'File berhasil dihapus'
     });
 
   } catch (error) {
