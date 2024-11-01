@@ -819,16 +819,18 @@ function validateFile(file) {
 router.get('/preview/:id', verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user.userId;
     
-    // Dapatkan data file dari database sesuai struktur tabel
+    // Dapatkan data file dari database sesuai struktur upload
     const { data: file, error } = await supabase
       .from('files')
-      .select('filename, original_name, path, mime_type')
+      .select('*')
       .eq('id', id)
+      .eq('user_id', userId)
       .single();
       
     if (error) throw error;
-    if (!file || !file.filename || !file.path) {
+    if (!file || !file.filename || !file.path || !file.file_url) {
       throw new Error('File tidak ditemukan atau data tidak lengkap');
     }
 
@@ -844,11 +846,11 @@ router.get('/preview/:id', verifyToken, async (req, res) => {
     }
     
     // Generate signed URL untuk preview
-    const filePath = `${file.path}/${file.filename}`.replace(/^\/+/, '');
+    const filePath = `${userId}/${file.path}/${file.filename}`.replace(/\/+/g, '/');
     const { data, error: signError } = await supabase
       .storage
       .from('files')
-      .createSignedUrl(filePath, 300); // URL valid selama 5 menit
+      .createSignedUrl(filePath, 300);
       
     if (signError) throw signError;
     if (!data || !data.signedUrl) throw new Error('Gagal membuat signed URL');
