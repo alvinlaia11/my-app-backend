@@ -820,31 +820,35 @@ router.get('/preview/:id', verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Dapatkan data file dari database
+    // Dapatkan data file dari database sesuai struktur tabel
     const { data: file, error } = await supabase
       .from('files')
-      .select('filename, filepath, type')
+      .select('filename, original_name, path, mime_type')
       .eq('id', id)
       .single();
       
     if (error) throw error;
-    if (!file || !file.filename || !file.filepath) {
+    if (!file || !file.filename || !file.path) {
       throw new Error('File tidak ditemukan atau data tidak lengkap');
     }
 
-    // Pastikan file adalah gambar berdasarkan ekstensi
-    const imageExtensions = ['jpg', 'jpeg', 'png', 'gif'];
-    const fileExtension = file.filename.split('.').pop();
+    // Pastikan file adalah gambar berdasarkan mime_type
+    const imageTypes = [
+      'image/jpeg',
+      'image/png', 
+      'image/gif'
+    ];
     
-    if (!imageExtensions.includes(fileExtension)) {
+    if (!imageTypes.includes(file.mime_type)) {
       throw new Error('File bukan gambar');
     }
     
     // Generate signed URL untuk preview
+    const filePath = `${file.path}/${file.filename}`.replace(/^\/+/, '');
     const { data, error: signError } = await supabase
       .storage
-      .from('files') // pastikan ini sesuai dengan bucket name di Supabase
-      .createSignedUrl(file.filepath, 60); // URL valid selama 60 detik
+      .from('files')
+      .createSignedUrl(filePath, 300); // URL valid selama 5 menit
       
     if (signError) throw signError;
     if (!data || !data.signedUrl) throw new Error('Gagal membuat signed URL');
