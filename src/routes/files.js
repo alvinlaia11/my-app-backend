@@ -821,50 +821,75 @@ router.get('/preview/:id', verifyToken, async (req, res) => {
     const { id } = req.params;
     const userId = req.user.userId;
     
-    // Dapatkan data file dari database sesuai struktur upload
+    console.log('Fetching file with ID:', id, 'for user:', userId);
+    
+    // Dapatkan data file dari database
     const { data: file, error } = await supabase
       .from('files')
       .select('*')
       .eq('id', id)
-      .eq('user_id', userId)
       .single();
       
-    if (error) throw error;
-    if (!file || !file.filename || !file.path || !file.file_url) {
-      throw new Error('File tidak ditemukan atau data tidak lengkap');
+    if (error) {
+      console.error('Database error:', error);
+      throw new Error('Gagal mengambil data file');
     }
 
-    // Pastikan file adalah gambar berdasarkan mime_type
-    const imageTypes = [
-      'image/jpeg',
-      'image/png', 
-      'image/gif'
-    ];
+    if (!file) {
+      throw new Error('File tidak ditemukan');
+    }
+
+    // Validasi kepemilikan file
+    if (file.user_id !== userId) {
+      throw new Error('Anda tidak memiliki akses ke file ini');
+    }
+
+    // Log data file untuk debugging
+    console.log('File data:', file);
+
+    // Validasi kelengkapan data
+    const requiredFields = ['filename', 'path', 'mime_type'];
+    const missingFields = requiredFields.filter(field => !file[field]);
     
+    if (missingFields.length > 0) {
+      throw new Error(`Data file tidak lengkap: ${missingFields.join(', ')} tidak ditemukan`);
+    }
+
+    // Pastikan file adalah gambar
+    const imageTypes = ['image/jpeg', 'image/png', 'image/gif'];
     if (!imageTypes.includes(file.mime_type)) {
       throw new Error('File bukan gambar');
     }
+
+    // Buat path file yang benar
+    const filePath = file.path.startsWith('/') ? file.path.slice(1) : file.path;
     
-    // Generate signed URL untuk preview
-    const filePath = `${userId}/${file.path}/${file.filename}`.replace(/\/+/g, '/');
-    const { data, error: signError } = await supabase
-      .storage
+    console.log('Generating signed URL for path:', filePath);
+
+    // Generate signed URL
+    const { data: urlData, error: signError } = await supabase.storage
       .from('files')
       .createSignedUrl(filePath, 300);
-      
-    if (signError) throw signError;
-    if (!data || !data.signedUrl) throw new Error('Gagal membuat signed URL');
-    
+
+    if (signError) {
+      console.error('Signed URL error:', signError);
+      throw new Error('Gagal membuat URL preview');
+    }
+
+    if (!urlData?.signedUrl) {
+      throw new Error('URL preview tidak valid');
+    }
+
     res.json({
       success: true,
-      url: data.signedUrl
+      url: urlData.signedUrl
     });
-    
+
   } catch (error) {
-    console.error('Error getting preview URL:', error);
-    res.status(500).json({
+    console.error('Preview error:', error);
+    res.status(error.message.includes('akses') ? 403 : 500).json({
       success: false,
-      error: error.message || 'Gagal mendapatkan URL preview'
+      error: error.message || 'Gagal mendapatkan preview file'
     });
   }
 });
