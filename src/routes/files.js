@@ -816,4 +816,39 @@ function validateFile(file) {
   }
 }
 
+router.get('/preview/:id', verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Dapatkan data file dari database
+    const { data: file, error } = await supabase
+      .from('files')
+      .select('*')
+      .eq('id', id)
+      .single();
+      
+    if (error) throw error;
+    
+    // Generate signed URL untuk preview
+    const { data: { signedUrl }, error: signError } = await supabase
+      .storage
+      .from('files')
+      .createSignedUrl(file.path, 60); // URL valid selama 60 detik
+      
+    if (signError) throw signError;
+    
+    res.json({
+      success: true,
+      url: signedUrl
+    });
+    
+  } catch (error) {
+    console.error('Error getting preview URL:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Gagal mendapatkan URL preview'
+    });
+  }
+});
+
 module.exports = { router };
