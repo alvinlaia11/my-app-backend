@@ -2,7 +2,7 @@ const express = require('express');
 const path = require('path');
 const cors = require('cors');
 const fileUpload = require('express-fileupload');
-const { supabase } = require('./config/supabase');
+const { supabase, testConnection } = require('./config/supabase');
 
 const app = express();
 
@@ -43,27 +43,36 @@ app.get('/', (req, res) => {
 // Health check endpoint
 app.get('/health', async (req, res) => {
   try {
-    // Test database connection
-    const { data, error } = await supabase.auth.getSession();
-    
-    if (error) {
-      console.error('Database connection failed:', error);
-      return res.status(503).json({
-        status: 'error',
-        message: 'Database connection failed',
-        error: error.message
-      });
-    }
-
+    // Basic health check tanpa DB
     res.status(200).json({
       status: 'OK',
-      timestamp: new Date().toISOString(),
-      database: 'connected'
+      timestamp: new Date().toISOString()
     });
-
   } catch (error) {
     console.error('Health check error:', error);
     res.status(500).json({
+      status: 'error',
+      message: error.message
+    });
+  }
+});
+
+// DB health check terpisah
+app.get('/health/db', async (req, res) => {
+  try {
+    const isConnected = await testConnection();
+    if (!isConnected) {
+      return res.status(503).json({
+        status: 'error',
+        message: 'Database connection failed'
+      });
+    }
+    res.status(200).json({
+      status: 'OK',
+      database: 'connected'
+    });
+  } catch (error) {
+    res.status(503).json({
       status: 'error',
       message: error.message
     });
