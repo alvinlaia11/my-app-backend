@@ -135,6 +135,9 @@ router.post('/', verifyToken, async (req, res) => {
       });
     }
 
+    // Simulasi loading dengan delay 1 detik
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
     // Insert ke database
     const { data: newCase, error } = await supabase
       .from('cases')
@@ -159,7 +162,6 @@ router.post('/', verifyToken, async (req, res) => {
     tomorrow.setDate(tomorrow.getDate() + 1);
 
     if (scheduleDate.toDateString() === tomorrow.toDateString()) {
-      // Buat notifikasi setelah 10 detik
       setTimeout(async () => {
         try {
           await createScheduleNotification(userId, newCase);
