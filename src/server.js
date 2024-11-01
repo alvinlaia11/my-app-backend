@@ -20,7 +20,7 @@ app.use(express.json());
 app.use(cors({
   origin: [
     "http://localhost:3000",
-    "https://my-app-frontend-production.up.railway.app",
+    "https://my-app-frontend-production-e401.up.railway.app",
     "https://my-app-backend-production-15df.up.railway.app"
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -55,12 +55,18 @@ app.use('/api/folders', foldersRouter);
 // Health check endpoint
 app.get('/health', (req, res) => {
   try {
+    console.log('Health check requested from:', req.headers.origin);
     res.json({ 
       status: 'OK', 
       timestamp: new Date().toISOString(),
       env: process.env.NODE_ENV,
       port: process.env.PORT,
-      supabase_url: process.env.SUPABASE_URL
+      supabase_url: process.env.SUPABASE_URL,
+      allowed_origins: [
+        "http://localhost:3000",
+        "https://my-app-frontend-production-e401.up.railway.app",
+        "https://my-app-backend-production-15df.up.railway.app"
+      ]
     });
   } catch (error) {
     console.error('Health check error:', error);
