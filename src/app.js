@@ -6,6 +6,7 @@ const fileUpload = require('express-fileupload');
 const authRouter = require('./routes/auth');
 const casesRouter = require('./routes/cases');
 const filesRouter = require('./routes/files');
+const foldersRouter = require('./routes/folders');
 
 const app = express();
 
@@ -23,6 +24,7 @@ app.use(fileUpload({
 app.use('/api/auth', authRouter);
 app.use('/api/cases', casesRouter);
 app.use('/api/files', filesRouter);
+app.use('/api/folders', foldersRouter);
 
 // Error handling
 app.use((err, req, res, next) => {
