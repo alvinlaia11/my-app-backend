@@ -882,7 +882,6 @@ router.get('/preview/:id', verifyToken, async (req, res) => {
     const { id } = req.params;
     const userId = req.user.id;
     
-    // Dapatkan data file dari database
     const { data: file, error } = await supabase
       .from('files')
       .select('*')
@@ -892,28 +891,24 @@ router.get('/preview/:id', verifyToken, async (req, res) => {
       
     if (error) throw new Error('File tidak ditemukan');
 
-    // Generate signed URL untuk preview
+    // Generate signed URL dengan waktu kadaluarsa 24 jam
     const filePath = `${userId}/${file.path}/${file.filename}`.replace(/\/+/g, '/');
-    
-    // Buat signed URL dengan waktu kadaluarsa yang lebih lama
-    const { data: urlData, error: urlError } = await supabase.storage
+    const { data: { signedUrl }, error: signedUrlError } = await supabase.storage
       .from('files')
-      .createSignedUrl(filePath, 3600, {
-        download: false
-      });
+      .createSignedUrl(filePath, 24 * 60 * 60); // 24 jam
 
-    if (urlError) throw urlError;
+    if (signedUrlError) throw signedUrlError;
 
     res.json({
       success: true,
-      url: urlData.signedUrl,
+      url: signedUrl,
       filename: file.original_name,
       mime_type: file.mime_type
     });
 
   } catch (error) {
     console.error('Preview error:', error);
-    res.status(error.message.includes('tidak ditemukan') ? 404 : 500).json({
+    res.status(500).json({
       success: false,
       error: error.message || 'Gagal mendapatkan preview file'
     });

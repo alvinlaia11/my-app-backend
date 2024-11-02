@@ -6,31 +6,15 @@ const { verifyToken } = require('../middleware/auth');
 router.use(verifyToken);
 
 // POST endpoint untuk membuat folder
-router.post('/', async (req, res) => {
+router.post('/', verifyToken, async (req, res) => {
   try {
     const { name, path = '' } = req.body;
-    const userId = req.user.userId;
+    const userId = req.user.id;
 
     if (!name || name.trim() === '') {
       return res.status(400).json({
         success: false,
         error: 'Nama folder tidak boleh kosong'
-      });
-    }
-
-    // Cek folder duplikat
-    const { data: existingFolder } = await supabase
-      .from('folders')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('name', name)
-      .eq('path', path)
-      .single();
-
-    if (existingFolder) {
-      return res.status(400).json({
-        success: false,
-        error: 'Folder dengan nama tersebut sudah ada'
       });
     }
 
@@ -40,7 +24,8 @@ router.post('/', async (req, res) => {
       .insert({
         name,
         path,
-        user_id: userId
+        user_id: userId,
+        created_at: new Date().toISOString()
       })
       .select()
       .single();
