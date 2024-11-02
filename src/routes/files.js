@@ -18,25 +18,36 @@ router.get('/', async (req, res) => {
     const { path = '' } = req.query;
     const userId = req.user.userId;
 
+    console.log('Fetching files for:', { userId, path });
+
     // Ambil files
     const { data: files, error: filesError } = await supabase
       .from('files')
       .select('*')
       .eq('user_id', userId)
-      .eq('path', path)
-      .order('created_at', { ascending: false });
+      .eq('path', path || '');
 
-    if (filesError) throw filesError;
+    if (filesError) {
+      console.error('Files error:', filesError);
+      throw filesError;
+    }
 
     // Ambil folders
     const { data: folders, error: foldersError } = await supabase
       .from('folders')
       .select('*')
       .eq('user_id', userId)
-      .eq('path', path)
-      .order('name', { ascending: true });
+      .eq('path', path || '');
 
-    if (foldersError) throw foldersError;
+    if (foldersError) {
+      console.error('Folders error:', foldersError);
+      throw foldersError;
+    }
+
+    console.log('Found:', {
+      filesCount: files?.length || 0,
+      foldersCount: folders?.length || 0
+    });
 
     res.json({
       success: true,
