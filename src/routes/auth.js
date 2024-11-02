@@ -17,20 +17,6 @@ router.post('/signin', async (req, res) => {
       });
     }
 
-    // Coba dapatkan user dari database terlebih dahulu
-    const { data: userProfile, error: profileError } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('email', email)
-      .single();
-
-    if (profileError) {
-      return res.status(401).json({
-        success: false,
-        error: 'Email atau password salah'
-      });
-    }
-
     // Login dengan Supabase Auth
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -45,20 +31,22 @@ router.post('/signin', async (req, res) => {
       });
     }
 
-    // Set session
-    const { data: session } = await supabase.auth.setSession({
-      access_token: data.session.access_token,
-      refresh_token: data.session.refresh_token
-    });
+    // Ambil profil user
+    const { data: profile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('user_id', data.user.id)
+      .single();
+
+    if (!profileError && profile) {
+      data.user.profile = profile;
+    }
 
     res.json({
       success: true,
-      user: {
-        ...data.user,
-        profile: userProfile
-      },
-      session: session.session,
-      token: session.session.access_token
+      user: data.user,
+      session: data.session,
+      token: data.session.access_token
     });
 
   } catch (error) {
@@ -201,32 +189,12 @@ router.post('/create-user', verifyToken, verifyAdmin, async (req, res) => {
 });
 
 // Endpoint verifikasi yang sudah ada
-router.post('/verify', async (req, res) => {
+router.post('/verify', verifyToken, async (req, res) => {
   try {
-    const token = req.headers.authorization?.split(' ')[1];
-    
-    if (!token) {
-      return res.status(401).json({
-        success: false,
-        error: 'Token tidak ditemukan'
-      });
-    }
-
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-    
-    if (error || !user) {
-      return res.status(401).json({
-        success: false,
-        error: 'Token tidak valid'
-      });
-    }
-
     res.json({
       success: true,
-      user: user,
-      role: user.user_metadata?.role || 'user'
+      user: req.user
     });
-
   } catch (error) {
     console.error('Token verification error:', error);
     res.status(401).json({
@@ -469,60 +437,5 @@ const checkUpcomingSchedules = async (userId) => {
     return 0;
   }
 };
-
-// Modifikasi endpoint login untuk menambahkan pengecekan jadwal
-router.post('/login', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    
-    console.log('Login attempt:', { email });
-    
-    if (!email || !password) {
-      console.log('Missing credentials');
-      return res.status(400).json({
-        success: false,
-        error: 'Email dan password harus diisi'
-      });
-    }
-
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-
-    console.log('Supabase login response:', { 
-      success: !error,
-      hasUser: !!data?.user,
-      error: error?.message 
-    });
-
-    if (error) {
-      return res.status(401).json({
-        success: false,
-        error: 'Email atau password salah'
-      });
-    }
-
-    const session = await supabase.auth.getSession();
-    console.log('Session data:', {
-      hasSession: !!session.data.session,
-      hasToken: !!session.data.session?.access_token
-    });
-    
-    res.json({
-      success: true,
-      user: data.user,
-      session: session.data.session,
-      token: session.data.session?.access_token
-    });
-
-  } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Gagal melakukan login: ' + error.message
-    });
-  }
-});
 
 module.exports = router;

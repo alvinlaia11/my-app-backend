@@ -13,7 +13,7 @@ const verifyToken = async (req, res, next) => {
 
     const { data: { user }, error } = await supabase.auth.getUser(token);
     
-    if (error) {
+    if (error || !user) {
       console.error('Token verification error:', error);
       return res.status(401).json({
         success: false,
@@ -21,34 +21,11 @@ const verifyToken = async (req, res, next) => {
       });
     }
 
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        error: 'User tidak ditemukan'
-      });
-    }
-
-    // Ambil data profil user
-    const { data: profile, error: profileError } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('user_id', user.id)
-      .single();
-
-    if (profileError) {
-      console.error('Profile fetch error:', profileError);
-      return res.status(401).json({
-        success: false,
-        error: 'Gagal mengambil profil user'
-      });
-    }
-
-    // Set user data lengkap ke request
+    // Set basic user data
     req.user = {
       id: user.id,
       email: user.email,
-      role: profile?.role || 'user',
-      profile: profile
+      role: user.user_metadata?.role || 'user'
     };
     
     next();
