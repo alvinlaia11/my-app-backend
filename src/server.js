@@ -27,7 +27,10 @@ app.use(fileUpload({
   abortOnLimit: true,
   responseOnLimit: 'File size limit has been reached',
   createParentPath: true,
-  parseNested: true
+  parseNested: true,
+  uploadTimeout: 0, // Tambahkan ini
+  safeFileNames: true, // Tambahkan ini
+  preserveExtension: true // Tambahkan ini
 }));
 
 // Logging middleware

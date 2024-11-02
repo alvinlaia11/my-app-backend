@@ -6,12 +6,6 @@ const { verifyToken } = require('../middleware/auth');
 const fileUpload = require('express-fileupload');
 
 router.use(verifyToken);
-router.use(fileUpload({
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max-file-size
-  useTempFiles: true,
-  tempFileDir: '/tmp/'
-}));
-
 // GET files dan folders
 router.get('/', verifyToken, async (req, res) => {
   try {
@@ -77,6 +71,12 @@ router.get('/', verifyToken, async (req, res) => {
 // POST endpoint untuk upload file
 router.post('/upload', async (req, res) => {
   try {
+    console.log('Upload request received:', {
+      files: !!req.files,
+      body: req.body,
+      headers: req.headers
+    });
+
     if (!req.files || !req.files.file) {
       return res.status(400).json({
         success: false,
@@ -88,15 +88,33 @@ router.post('/upload', async (req, res) => {
     const userId = req.user.id;
     const uploadPath = req.body.path || '';
 
+    // Validasi file
+    try {
+      validateFile(file);
+    } catch (error) {
+      return res.status(400).json({
+        success: false,
+        error: error.message
+      });
+    }
+
     // Generate unique filename
-    const filename = `${Date.now()}-${file.name}`;
+    const filename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '')}`;
     const filePath = `${userId}/${uploadPath}/${filename}`.replace(/\/+/g, '/');
+
+    console.log('Uploading file:', {
+      originalName: file.name,
+      size: file.size,
+      type: file.mimetype,
+      path: filePath
+    });
 
     // Upload ke Supabase Storage
     const { error: uploadError } = await supabase.storage
       .from('files')
       .upload(filePath, file.data, {
-        contentType: file.mimetype
+        contentType: file.mimetype,
+        cacheControl: '3600'
       });
 
     if (uploadError) throw uploadError;
@@ -130,8 +148,9 @@ router.post('/upload', async (req, res) => {
   } catch (error) {
     console.error('Upload error:', error);
     res.status(500).json({
-      success: false, 
-      error: 'Gagal mengupload file: ' + error.message
+      success: false,
+      error: 'Gagal mengupload file: ' + error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 });
