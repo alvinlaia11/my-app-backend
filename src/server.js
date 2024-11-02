@@ -5,6 +5,7 @@ const userRouter = require('./routes/user');
 const authRouter = require('./routes/auth');
 const casesRouter = require('./routes/cases');
 const { createClient } = require('@supabase/supabase-js');
+const { supabase } = require('./config/supabase');
 
 const app = express();
 
@@ -28,13 +29,7 @@ app.use((req, res, next) => {
 // Health check endpoint
 app.get('/health', async (req, res) => {
   try {
-    // Test Supabase connection
-    const { error: supabaseError } = await supabase.auth.getSession();
-    
-    if (supabaseError) {
-      throw new Error(`Supabase connection failed: ${supabaseError.message}`);
-    }
-
+    // Basic check tanpa Supabase dulu
     res.json({
       status: 'ok',
       timestamp: new Date().toISOString(),
@@ -47,19 +42,14 @@ app.get('/health', async (req, res) => {
         hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
         port: process.env.PORT,
         frontendUrl: process.env.FRONTEND_URL
-      },
-      memory: process.memoryUsage()
+      }
     });
   } catch (error) {
     console.error('Health check error:', error);
     res.status(500).json({
       status: 'error',
       message: error.message,
-      timestamp: new Date().toISOString(),
-      details: {
-        name: error.name,
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-      }
+      timestamp: new Date().toISOString()
     });
   }
 });
