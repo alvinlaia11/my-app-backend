@@ -19,5 +19,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 
 EXPOSE 5000
 
-# Use node directly instead of npm
 CMD ["node", "src/server.js"]

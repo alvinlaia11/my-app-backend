@@ -10,6 +10,7 @@
       "startCommand": "node src/server.js",
       "healthcheckPath": "/health",
       "healthcheckTimeout": 10000,
-      "healthcheckInterval": 30000
+      "healthcheckInterval": 30000,
+      "port": 5000
     }
   }
