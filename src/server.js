@@ -1,21 +1,30 @@
 const express = require('express');
 const cors = require('cors');
+const fileUpload = require('express-fileupload');
+const userRouter = require('./routes/user');
+const authRouter = require('./routes/auth');
+const casesRouter = require('./routes/cases');
+
 const app = express();
 
 // Middleware
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
-app.use(express.json());
 
-// Tambahkan sebelum route handlers
+app.use(express.json());
+app.use(fileUpload());
+
+// Logging middleware
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
   next();
 });
 
-// Health check endpoint HARUS di root path
+// Health check endpoint
 app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
@@ -25,9 +34,9 @@ app.get('/health', (req, res) => {
 });
 
 // Register routes dengan prefix /api
-const authRouter = require('./routes/auth');
 app.use('/api/auth', authRouter);
 app.use('/api/user', userRouter);
+app.use('/api/cases', casesRouter);
 
 // Error handling
 app.use((err, req, res, next) => {
@@ -39,6 +48,8 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+module.exports = app;
