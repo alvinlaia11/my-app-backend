@@ -124,7 +124,7 @@ router.delete('/:id', verifyToken, async (req, res) => {
 // POST /api/cases - Tambah kasus baru
 router.post('/', verifyToken, async (req, res) => {
   try {
-    const { title, date, description, parties, type } = req.body;
+    const { title, date, description, type, related_parties } = req.body;
     const userId = req.user.userId;
 
     // Validasi input
@@ -135,40 +135,37 @@ router.post('/', verifyToken, async (req, res) => {
       });
     }
 
-    // Simulasi loading dengan delay 1 detik
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // Insert ke database
-    const { data: newCase, error } = await supabase
+    // Insert kasus baru
+    const { data: newCase, error: insertError } = await supabase
       .from('cases')
       .insert({
         title,
         date,
-        description,
-        parties,
+        description: description || '',
         type,
+        related_parties: related_parties || '',
         user_id: userId,
-        created_by: userId,
         notification_sent: false
       })
       .select()
       .single();
 
-    if (error) throw error;
+    if (insertError) throw insertError;
 
-    // Cek apakah jadwal besok
+    // Cek apakah perlu membuat notifikasi (jika jadwal besok)
     const scheduleDate = new Date(date);
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    scheduleDate.setHours(0, 0, 0, 0);
 
-    if (scheduleDate.toDateString() === tomorrow.toDateString()) {
-      setTimeout(async () => {
-        try {
-          await createScheduleNotification(userId, newCase);
-        } catch (err) {
-          console.error('Error creating notification:', err);
-        }
-      }, 10000);
+    if (scheduleDate.getTime() === tomorrow.getTime()) {
+      await createScheduleNotification(userId, newCase);
+      
+      await supabase
+        .from('cases')
+        .update({ notification_sent: true })
+        .eq('id', newCase.id);
     }
 
     res.json({
