@@ -882,7 +882,6 @@ router.get('/preview/:id', verifyToken, async (req, res) => {
     const { id } = req.params;
     const userId = req.user.id;
     
-    // Dapatkan data file dari database
     const { data: file, error } = await supabase
       .from('files')
       .select('*')
@@ -890,43 +889,20 @@ router.get('/preview/:id', verifyToken, async (req, res) => {
       .eq('user_id', userId)
       .single();
       
-    if (error) {
-      console.error('Database error:', error);
-      throw new Error('Gagal mengambil data file');
-    }
+    if (error) throw new Error('File tidak ditemukan');
 
-    if (!file) {
-      throw new Error('File tidak ditemukan');
-    }
-
-    // Pastikan file adalah gambar
-    const imageTypes = ['image/jpeg', 'image/png', 'image/gif'];
-    if (!imageTypes.includes(file.mime_type)) {
-      throw new Error('File bukan gambar');
-    }
-
-    // Buat path file
+    // Generate signed URL untuk preview
     const filePath = `${userId}/${file.path}/${file.filename}`.replace(/\/+/g, '/');
-    
-    // Generate signed URL untuk preview dan download
-    const [previewUrl, downloadUrl] = await Promise.all([
-      supabase.storage.from('files').createSignedUrl(filePath, 300),
-      supabase.storage.from('files').createSignedUrl(filePath, 60, {
-        download: true,
-        filename: file.original_name
-      })
-    ]);
+    const { data: { signedUrl }, error: signedUrlError } = await supabase.storage
+      .from('files')
+      .createSignedUrl(filePath, 3600); // URL valid selama 1 jam
 
-    if (previewUrl.error || downloadUrl.error) {
-      throw new Error('Gagal membuat URL');
-    }
+    if (signedUrlError) throw signedUrlError;
 
     res.json({
       success: true,
-      url: previewUrl.data.signedUrl,
-      downloadUrl: downloadUrl.data.signedUrl,
-      filename: file.original_name,
-      id: file.id
+      url: signedUrl,
+      filename: file.original_name
     });
 
   } catch (error) {
