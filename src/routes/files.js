@@ -12,6 +12,7 @@ router.get('/', verifyToken, async (req, res) => {
   try {
     const userId = req.user.id;
     const { path = '' } = req.query;
+    console.log('Fetching files for:', { userId, path });
 
     // Get folders
     const { data: folders, error: foldersError } = await supabase
