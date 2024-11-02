@@ -25,13 +25,18 @@ app.use((req, res, next) => {
 });
 
 // Health check endpoint
-app.get('/api/health', (req, res) => {
+app.get('/health', (req, res) => {
   try {
     res.json({
       status: 'ok',
       timestamp: new Date().toISOString(),
       service: 'backend-kejaksaan',
-      uptime: process.uptime()
+      uptime: process.uptime(),
+      env: {
+        nodeEnv: process.env.NODE_ENV,
+        hasSupabaseUrl: !!process.env.SUPABASE_URL,
+        hasSupabaseKey: !!process.env.SUPABASE_ANON_KEY
+      }
     });
   } catch (error) {
     console.error('Health check error:', error);
@@ -82,7 +87,8 @@ console.log('Starting server with config:', {
   port: PORT,
   nodeEnv: process.env.NODE_ENV,
   hasSupabaseUrl: !!process.env.SUPABASE_URL,
-  hasSupabaseKey: !!process.env.SUPABASE_ANON_KEY
+  hasSupabaseKey: !!process.env.SUPABASE_ANON_KEY,
+  corsOrigin: process.env.FRONTEND_URL || 'http://localhost:3000'
 });
 
 module.exports = app;
