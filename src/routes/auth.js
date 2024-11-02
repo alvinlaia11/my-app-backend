@@ -217,29 +217,21 @@ router.post('/verify', async (req, res) => {
 });
 
 // GET /api/auth/users
-router.get('/users', verifyToken, verifyAdmin, async (req, res) => {
+router.get('/users', verifyToken, async (req, res) => {
   try {
-    const { data, error } = await supabaseAdmin.auth.admin.listUsers();
+    const { data: { users }, error } = await supabase.auth.admin.listUsers();
     
     if (error) throw error;
 
-    const users = data.users.map(user => ({
-      id: user.id,
-      email: user.email,
-      user_metadata: user.user_metadata || {},
-      status: user.status || 'active'
-    }));
-
     res.json({
       success: true,
-      users
+      users: users
     });
-
   } catch (error) {
-    console.error('Error in GET /users:', error);
+    console.error('Error fetching users:', error);
     res.status(500).json({
       success: false,
-      error: 'Gagal mengambil daftar user: ' + error.message
+      error: 'Gagal mengambil data pengguna'
     });
   }
 });
