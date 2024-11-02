@@ -5,51 +5,51 @@ const { verifyToken, verifyAdmin } = require('../middleware/auth');
 const crypto = require('crypto');
 const { createScheduleNotification } = require('../services/notificationService');
 
-// POST /api/auth/signin
-router.post('/signin', async (req, res) => {
-  try {
-    const { email, password } = req.body;
+// // POST /api/auth/signin
+// router.post('/signin', async (req, res) => {
+//   try {
+//     const { email, password } = req.body;
     
-    console.log('Signin attempt:', { email });
+//     console.log('Signin attempt:', { email });
     
-    if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        error: 'Email dan password harus diisi'
-      });
-    }
+//     if (!email || !password) {
+//       return res.status(400).json({
+//         success: false,
+//         error: 'Email dan password harus diisi'
+//       });
+//     }
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
+//     const { data, error } = await supabase.auth.signInWithPassword({
+//       email,
+//       password
+//     });
 
-    if (error) {
-      console.error('Signin error:', error);
-      return res.status(401).json({
-        success: false,
-        error: 'Email atau password salah'
-      });
-    }
+//     if (error) {
+//       console.error('Signin error:', error);
+//       return res.status(401).json({
+//         success: false,
+//         error: 'Email atau password salah'
+//       });
+//     }
 
-    // Get session after successful login
-    const { data: session } = await supabase.auth.getSession();
+//     // Get session after successful login
+//     const { data: session } = await supabase.auth.getSession();
 
-    res.json({
-      success: true,
-      user: data.user,
-      session: session.session,
-      token: session.session?.access_token
-    });
+//     res.json({
+//       success: true,
+//       user: data.user,
+//       session: session.session,
+//       token: session.session?.access_token
+//     });
 
-  } catch (error) {
-    console.error('Signin error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Gagal melakukan login: ' + error.message
-    });
-  }
-});
+//   } catch (error) {
+//     console.error('Signin error:', error);
+//     res.status(500).json({
+//       success: false,
+//       error: 'Gagal melakukan login: ' + error.message
+//     });
+//   }
+// });
 
 // POST /api/auth/signup
 router.post('/signup', async (req, res) => {
