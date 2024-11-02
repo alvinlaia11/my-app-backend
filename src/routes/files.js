@@ -86,13 +86,21 @@ router.post('/upload', async (req, res) => {
     const userId = req.user.id;
     const uploadPath = req.body.path || '';
 
-    // Validasi file
-    try {
-      validateFile(file);
-    } catch (error) {
+    // Validasi ukuran dan tipe file
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf'];
+    
+    if (file.size > maxSize) {
       return res.status(400).json({
         success: false,
-        error: error.message
+        error: 'Ukuran file melebihi batas maksimum (10MB)'
+      });
+    }
+
+    if (!allowedTypes.includes(file.mimetype)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Tipe file tidak didukung'
       });
     }
 
@@ -100,27 +108,23 @@ router.post('/upload', async (req, res) => {
     const filename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '')}`;
     const filePath = `${userId}/${uploadPath}/${filename}`.replace(/\/+/g, '/');
 
-    console.log('Uploading file:', {
-      originalName: file.name,
-      size: file.size,
-      type: file.mimetype,
-      path: filePath
-    });
-
     // Upload ke Supabase Storage
-    const { error: uploadError } = await supabase.storage
+    const { data, error: uploadError } = await supabase.storage
       .from('files')
       .upload(filePath, file.data, {
-        contentType: file.mimetype,
-        cacheControl: '3600'
+        cacheControl: '3600',
+        upsert: false,
+        contentType: file.mimetype
       });
 
     if (uploadError) throw uploadError;
 
-    // Get public URL
-    const { data: { publicUrl } } = supabase.storage
+    // Dapatkan public URL
+    const { data: { publicUrl }, error: urlError } = supabase.storage
       .from('files')
       .getPublicUrl(filePath);
+
+    if (urlError) throw urlError;
 
     // Simpan metadata ke database
     const { data: fileData, error: dbError } = await supabase
@@ -128,10 +132,11 @@ router.post('/upload', async (req, res) => {
       .insert({
         filename,
         original_name: file.name,
-        path: uploadPath,
-        file_url: publicUrl,
         mime_type: file.mimetype,
-        user_id: userId
+        size: file.size,
+        path: uploadPath,
+        user_id: userId,
+        public_url: publicUrl
       })
       .select()
       .single();
