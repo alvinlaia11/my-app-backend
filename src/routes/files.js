@@ -881,7 +881,7 @@ router.get('/preview/:id', verifyToken, async (req, res) => {
     
     const { data: file, error } = await supabase
       .from('files')
-      .select('*')
+      .select('filename, original_name, mime_type, path')
       .eq('id', id)
       .eq('user_id', userId)
       .single();
@@ -892,16 +892,24 @@ router.get('/preview/:id', verifyToken, async (req, res) => {
 
     const filePath = `${userId}/${file.path}/${file.filename}`.replace(/\/+/g, '/');
     
-    // Buat signed URL dengan waktu kadaluarsa lebih pendek
-    const { data, error: signedUrlError } = await supabase.storage
+    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
       .from('files')
-      .createSignedUrl(filePath, 3600); // 1 jam
+      .createSignedUrl(filePath, 3600, {
+        download: false,
+        transform: {
+          width: 800,
+          height: 800,
+          resize: 'contain'
+        }
+      });
 
-    if (signedUrlError) throw signedUrlError;
+    if (signedUrlError) {
+      throw signedUrlError;
+    }
 
     res.json({
       success: true,
-      url: data.signedUrl,
+      url: signedUrlData.signedUrl,
       filename: file.original_name,
       mime_type: file.mime_type
     });
