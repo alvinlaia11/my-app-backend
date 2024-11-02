@@ -1,13 +1,20 @@
 [build]
-builder = "nixpacks"
-buildCommand = "npm install"
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
 
 [deploy]
-startCommand = "npm start"
-healthcheckPath = "/health"
-healthcheckTimeout = 10
-restartPolicyType = "on-failure"
-restartPolicyMaxRetries = 3
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
 
-[env]
-NODE_ENV = "production" 
+[[services]]
+internal_port = 5000
+protocol = "tcp"
+
+  [services.concurrency]
+  type = "connections"
+  hard_limit = 25
+  soft_limit = 20
+
+  [[services.ports]]
+  handlers = ["http"]
+  port = "80"
