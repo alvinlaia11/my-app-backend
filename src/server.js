@@ -9,15 +9,22 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Health check endpoint
+// Tambahkan sebelum route handlers
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  next();
+});
+
+// Health check endpoint HARUS di root path
 app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    service: 'backend-kejaksaan'
   });
 });
 
-// Register routes
+// Register routes dengan prefix /api
 const authRouter = require('./routes/auth');
 app.use('/api/auth', authRouter);
 app.use('/api/user', userRouter);
@@ -26,7 +33,7 @@ app.use('/api/user', userRouter);
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({
-    success: false, 
+    success: false,
     error: 'Internal Server Error'
   });
 });
