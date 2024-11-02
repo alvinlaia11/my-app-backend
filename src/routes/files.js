@@ -85,7 +85,7 @@ router.post('/upload', async (req, res) => {
     }
 
     const file = req.files.file;
-    const userId = req.user.userId;
+    const userId = req.user.id;
     const uploadPath = req.body.path || '';
 
     // Generate unique filename
@@ -140,7 +140,7 @@ router.post('/upload', async (req, res) => {
 router.delete('/:id', verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user.userId;
+    const userId = req.user.id;
 
     if (!id) {
       return res.status(400).json({
@@ -210,7 +210,7 @@ router.delete('/:id', verifyToken, async (req, res) => {
 router.delete('/folders/:id', async (req, res) => {
   try {
     const folderId = req.params.id;
-    const userId = req.user.userId;
+    const userId = req.user.id;
 
     // Dapatkan informasi folder
     const { data: folder, error: folderError } = await supabase
@@ -273,7 +273,7 @@ router.delete('/folders/:id', async (req, res) => {
 router.post('/folders', async (req, res) => {
   try {
     const { name, path: folderPath = '' } = req.body;
-    const userId = req.user.userId;
+    const userId = req.user.id;
 
     console.log('Creating folder:', { name, folderPath, userId });
 
@@ -340,7 +340,7 @@ router.put('/rename/:type/:id', async (req, res) => {
   try {
     const { type, id } = req.params;
     const { newName } = req.body;
-    const userId = req.user.userId;
+    const userId = req.user.id;
 
     console.log('Rename request:', { type, id, newName, userId });
 
@@ -396,7 +396,7 @@ router.put('/rename/:type/:id', async (req, res) => {
 router.get('/download/:id', async (req, res) => {
   try {
     const fileId = req.params.id;
-    const userId = req.user.userId;
+    const userId = req.user.id;
 
     // Dapatkan informasi file dari database
     const { data: file, error: fetchError } = await supabase
@@ -440,7 +440,7 @@ router.get('/download/:id', async (req, res) => {
 router.get('/search', async (req, res) => {
   try {
     const { query } = req.query;
-    const userId = req.user.userId;
+    const userId = req.user.id;
 
     if (!query) {
       return res.status(400).json({
@@ -503,7 +503,7 @@ router.get('/search', async (req, res) => {
 router.get('/details/:type/:id', async (req, res) => {
   try {
     const { type, id } = req.params;
-    const userId = req.user.userId;
+    const userId = req.user.id;
 
     if (type === 'file') {
       const { data: file, error: fileError } = await supabase
@@ -602,7 +602,7 @@ router.get('/details/:type/:id', async (req, res) => {
 // GET endpoint untuk statistik storage
 router.get('/stats', async (req, res) => {
   try {
-    const userId = req.user.userId;
+    const userId = req.user.id;
 
     // Dapatkan total ukuran file
     const { data: files, error: filesError } = await supabase
@@ -659,7 +659,7 @@ router.get('/stats', async (req, res) => {
 router.get('/breadcrumb', async (req, res) => {
   try {
     const { path = '' } = req.query;
-    const userId = req.user.userId;
+    const userId = req.user.id;
 
     if (!path) {
       return res.json({
@@ -715,7 +715,7 @@ router.get('/breadcrumb', async (req, res) => {
 // GET endpoint untuk riwayat aktivitas
 router.get('/activity', async (req, res) => {
   try {
-    const userId = req.user.userId;
+    const userId = req.user.id;
     const { limit = 10, offset = 0 } = req.query;
 
     // Dapatkan riwayat aktivitas file
@@ -781,7 +781,7 @@ router.post('/copy/:type/:id', async (req, res) => {
   try {
     const { type, id } = req.params;
     const { destinationPath } = req.body;
-    const userId = req.user.userId;
+    const userId = req.user.id;
 
     if (type === 'file') {
       // Copy file logic
@@ -860,7 +860,7 @@ function validateFile(file) {
 router.get('/preview/:id', verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user.userId;
+    const userId = req.user.id;
     
     // Dapatkan data file dari database
     const { data: file, error } = await supabase

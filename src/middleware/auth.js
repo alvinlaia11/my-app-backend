@@ -16,7 +16,11 @@ const verifyToken = async (req, res, next) => {
     
     if (error) throw error;
     
-    req.user = user;
+    req.user = {
+      id: user.id,
+      email: user.email,
+      role: user.role
+    };
     next();
   } catch (error) {
     console.error('Auth error:', error);
