@@ -216,53 +216,40 @@ router.post('/verify', async (req, res) => {
   }
 });
 
-// GET /api/auth/users
-router.get('/users', verifyToken, async (req, res) => {
+// GET /api/auth/users (Admin only)
+router.get('/users', verifyToken, verifyAdmin, async (req, res) => {
   try {
-    // Cek apakah user adalah admin
-    const { data: userProfile, error: profileError } = await supabase
-      .from('user_profiles')
-      .select('role')
-      .eq('user_id', req.user.id)
-      .single();
-
-    if (profileError) throw profileError;
-    
-    if (userProfile.role !== 'admin') {
-      return res.status(403).json({
-        success: false,
-        error: 'Akses ditolak'
-      });
-    }
-
-    // Ambil data semua user beserta profilnya
-    const { data: users, error: usersError } = await supabase
+    // Ambil semua user profiles
+    const { data: profiles, error: profilesError } = await supabase
       .from('user_profiles')
       .select(`
         *,
-        auth_users:user_id (
+        auth_user:user_id (
           email,
-          created_at,
-          last_sign_in_at
+          last_sign_in_at,
+          created_at
         )
-      `);
+      `)
+      .order('created_at', { ascending: false });
 
-    if (usersError) throw usersError;
+    if (profilesError) throw profilesError;
+
+    const formattedUsers = profiles.map(profile => ({
+      id: profile.user_id,
+      email: profile.auth_user?.email,
+      username: profile.username,
+      position: profile.position,
+      phone: profile.phone,
+      office: profile.office,
+      role: profile.role,
+      status: profile.status,
+      last_login: profile.auth_user?.last_sign_in_at,
+      created_at: profile.created_at
+    }));
 
     res.json({
       success: true,
-      users: users.map(user => ({
-        id: user.user_id,
-        email: user.auth_users?.email,
-        username: user.username,
-        role: user.role,
-        position: user.position,
-        phone: user.phone,
-        office: user.office,
-        status: user.status,
-        created_at: user.created_at,
-        last_login: user.auth_users?.last_sign_in_at
-      }))
+      users: formattedUsers
     });
 
   } catch (error) {
@@ -517,5 +504,32 @@ router.post('/login', async (req, res) => {
     });
   }
 });
+
+const verifyAdmin = async (req, res, next) => {
+  try {
+    const { data: profile, error } = await supabase
+      .from('user_profiles')
+      .select('role')
+      .eq('user_id', req.user.id)
+      .single();
+
+    if (error) throw error;
+
+    if (profile.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        error: 'Akses ditolak: Membutuhkan hak akses admin'
+      });
+    }
+
+    next();
+  } catch (error) {
+    console.error('Admin verification error:', error);
+    res.status(403).json({
+      success: false,
+      error: 'Gagal memverifikasi hak akses admin'
+    });
+  }
+};
 
 module.exports = router;
