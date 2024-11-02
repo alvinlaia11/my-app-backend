@@ -124,7 +124,7 @@ router.delete('/:id', verifyToken, async (req, res) => {
 // POST /api/cases - Tambah kasus baru
 router.post('/', verifyToken, async (req, res) => {
   try {
-    const { title, date, description, type, related_parties } = req.body;
+    const { title, date, description, type } = req.body;
     const userId = req.user.userId;
 
     // Validasi input
@@ -143,7 +143,6 @@ router.post('/', verifyToken, async (req, res) => {
         date,
         description: description || '',
         type,
-        related_parties: related_parties || '',
         user_id: userId,
         notification_sent: false
       })
@@ -152,7 +151,7 @@ router.post('/', verifyToken, async (req, res) => {
 
     if (insertError) throw insertError;
 
-    // Cek apakah perlu membuat notifikasi (jika jadwal besok)
+    // Cek apakah perlu membuat notifikasi
     const scheduleDate = new Date(date);
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -161,11 +160,6 @@ router.post('/', verifyToken, async (req, res) => {
 
     if (scheduleDate.getTime() === tomorrow.getTime()) {
       await createScheduleNotification(userId, newCase);
-      
-      await supabase
-        .from('cases')
-        .update({ notification_sent: true })
-        .eq('id', newCase.id);
     }
 
     res.json({

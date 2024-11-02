@@ -3,24 +3,16 @@ const { supabase } = require('../config/supabase');
 const verifyToken = async (req, res, next) => {
   try {
     const token = req.headers.authorization?.split(' ')[1];
-    console.log('Auth check:', {
-      hasToken: !!token,
-      headers: req.headers
-    });
-    
-    if (!token) {
-      throw new Error('Token tidak ditemukan');
-    }
+    if (!token) throw new Error('No token provided');
 
     const { data: { user }, error } = await supabase.auth.getUser(token);
-    
     if (error) throw error;
-    
+
     req.user = {
-      id: user.id,
-      email: user.email,
-      role: user.role
+      userId: user.id,
+      email: user.email
     };
+    
     next();
   } catch (error) {
     console.error('Auth error:', error);
