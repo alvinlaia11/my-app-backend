@@ -29,12 +29,21 @@ app.use((req, res, next) => {
 });
 
 // Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    service: 'backend-kejaksaan'
-  });
+app.get('/api/health', (req, res) => {
+  try {
+    res.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      service: 'backend-kejaksaan',
+      uptime: process.uptime()
+    });
+  } catch (error) {
+    console.error('Health check error:', error);
+    res.status(500).json({
+      status: 'error',
+      message: error.message
+    });
+  }
 });
 
 // Register routes dengan prefix /api
@@ -42,12 +51,29 @@ app.use('/api/auth', authRouter);
 app.use('/api/user', userRouter);
 app.use('/api/cases', casesRouter);
 
-// Error handling
+// Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({
-    success: false,
-    error: 'Internal Server Error'
+  console.error('Error details:', {
+    message: err.message,
+    stack: err.stack,
+    path: req.path
+  });
+  
+  res.status(err.status || 500).json({
+    status: 'error',
+    code: err.status || 500,
+    message: err.message || 'Internal Server Error',
+    request_id: req.headers['x-request-id']
+  });
+});
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({
+    status: 'error',
+    code: 404,
+    message: 'Endpoint tidak ditemukan',
+    path: req.path
   });
 });
 
