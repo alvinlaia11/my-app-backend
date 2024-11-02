@@ -2,17 +2,22 @@ FROM node:18-alpine
 
 WORKDIR /app
 
+# Install dependencies
 COPY package*.json ./
-RUN npm install
+RUN npm ci --only=production
 
+# Copy source code
 COPY . .
 
+# Set environment
 ENV NODE_ENV=production
 ENV PORT=5000
-ENV SUPABASE_URL=https://donoendoouitbczvyweh.supabase.co
-ENV SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRvbm9lbmRvb3VpdGJjenZ5d2VoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzAyNjMyODQsImV4cCI6MjA0NTgzOTI4NH0.Q1cIUQb6V6uaVmycsndYAFeu-Rk8n65NqKOjBrkfLbw
-ENV SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRvbm9lbmRvb3VpdGJjenZ5d2VoIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczMDI2MzI4NCwiZXhwIjoyMDQ1ODM5Mjg0fQ.4JHxkrxZWjXK9Vx9UzXtBHVk7_TXXFRKQyxfGBJGvYE
+
+# Add healthcheck
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:5000/health || exit 1
 
 EXPOSE 5000
 
-CMD ["npm", "start"]
+# Use node directly instead of npm
+CMD ["node", "src/server.js"]

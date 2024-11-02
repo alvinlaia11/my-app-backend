@@ -29,12 +29,22 @@ app.use((req, res, next) => {
 // Health check endpoint
 app.get('/health', async (req, res) => {
   try {
-    // Basic check tanpa Supabase dulu
+    // Test Supabase connection
+    const { data, error } = await supabase.auth.getSession();
+    
+    if (error) {
+      throw new Error(`Supabase connection failed: ${error.message}`);
+    }
+
     res.json({
       status: 'ok',
       timestamp: new Date().toISOString(),
       service: 'backend-kejaksaan',
       uptime: process.uptime(),
+      supabase: {
+        connected: true,
+        sessionTest: !!data
+      },
       env: {
         nodeEnv: process.env.NODE_ENV,
         hasSupabaseUrl: !!process.env.SUPABASE_URL,
@@ -46,10 +56,14 @@ app.get('/health', async (req, res) => {
     });
   } catch (error) {
     console.error('Health check error:', error);
-    res.status(500).json({
+    res.status(503).json({
       status: 'error',
       message: error.message,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      details: {
+        type: error.name,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      }
     });
   }
 });
@@ -97,8 +111,11 @@ console.log('Starting server with config:', {
   corsOrigin: process.env.FRONTEND_URL || 'http://localhost:3000'
 });
 
-app.listen(PORT, '0.0.0.0', () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+server.timeout = 30000; // 30 detik timeout
+server.keepAliveTimeout = 65000; // 65 detik keep-alive
 
 module.exports = app;
