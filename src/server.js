@@ -1,53 +1,32 @@
 const express = require('express');
 const cors = require('cors');
-const fileUpload = require('express-fileupload');
-const path = require('path');
-
-const authRouter = require('./routes/auth');
-const filesRouter = require('./routes/files');
-const foldersRouter = require('./routes/folders');
-const casesRouter = require('./routes/cases');
-const notificationsRouter = require('./routes/notifications');
-const userRouter = require('./routes/user');
-
 const app = express();
 
 // Middleware
-app.use(express.json());
-app.use(fileUpload());
 app.use(cors({
-  origin: [
-    "http://localhost:3000",
-    "https://my-app-frontend-production-e401.up.railway.app",
-    "https://my-app-backend-production-15df.up.railway.app"
-  ],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  credentials: true
 }));
+app.use(express.json());
 
 // Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.status(200).json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime()
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString()
   });
 });
 
-// Routes
+// Register routes
+const authRouter = require('./routes/auth');
 app.use('/api/auth', authRouter);
-app.use('/api/files', filesRouter);
-app.use('/api/folders', foldersRouter);
-app.use('/api/cases', casesRouter);
-app.use('/api/notifications', notificationsRouter);
 app.use('/api/user', userRouter);
 
 // Error handling
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({
-    success: false,
+    success: false, 
     error: 'Internal Server Error'
   });
 });
