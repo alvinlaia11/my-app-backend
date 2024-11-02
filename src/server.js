@@ -19,7 +19,16 @@ app.use(cors({
 }));
 
 app.use(express.json());
-app.use(fileUpload());
+app.use(fileUpload({
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max-file-size
+  useTempFiles: true,
+  tempFileDir: '/tmp/',
+  debug: true, // Tambahkan ini untuk debugging
+  abortOnLimit: true,
+  responseOnLimit: 'File size limit has been reached',
+  createParentPath: true,
+  parseNested: true
+}));
 
 // Logging middleware
 app.use((req, res, next) => {
