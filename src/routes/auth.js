@@ -10,7 +10,11 @@ router.post('/signin', async (req, res) => {
   try {
     const { email, password } = req.body;
     
-    console.log('Signin attempt:', { email });
+    console.log('Signin attempt:', { 
+      email,
+      hasPassword: !!password,
+      headers: req.headers
+    });
     
     if (!email || !password) {
       return res.status(400).json({
@@ -404,45 +408,45 @@ const checkUpcomingSchedules = async (userId) => {
 };
 
 // Modifikasi endpoint login untuk menambahkan pengecekan jadwal
-router.post('/login', async (req, res) => {
-  try {
-    const { email, password } = req.body;
+// router.post('/login', async (req, res) => {
+//   try {
+//     const { email, password } = req.body;
     
-    if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        error: 'Email dan password harus diisi'
-      });
-    }
+//     if (!email || !password) {
+//       return res.status(400).json({
+//         success: false,
+//         error: 'Email dan password harus diisi'
+//       });
+//     }
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
+//     const { data, error } = await supabase.auth.signInWithPassword({
+//       email,
+//       password
+//     });
 
-    if (error) {
-      return res.status(401).json({
-        success: false,
-        error: 'Email atau password salah'
-      });
-    }
+//     if (error) {
+//       return res.status(401).json({
+//         success: false,
+//         error: 'Email atau password salah'
+//       });
+//     }
 
-    const session = await supabase.auth.getSession();
+//     const session = await supabase.auth.getSession();
     
-    res.json({
-      success: true,
-      user: data.user,
-      session: session.data.session,
-      token: session.data.session?.access_token
-    });
+//     res.json({
+//       success: true,
+//       user: data.user,
+//       session: session.data.session,
+//       token: session.data.session?.access_token
+//     });
 
-  } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Gagal melakukan login: ' + error.message
-    });
-  }
-});
+//   } catch (error) {
+//     console.error('Login error:', error);
+//     res.status(500).json({
+//       success: false,
+//       error: 'Gagal melakukan login: ' + error.message
+//     });
+//   }
+// });
 
 module.exports = router;
