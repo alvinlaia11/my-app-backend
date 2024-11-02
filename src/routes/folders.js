@@ -8,7 +8,8 @@ router.post('/', verifyToken, async (req, res) => {
     const { name, path = '' } = req.body;
     const userId = req.user.id;
 
-    // Validasi nama folder
+    console.log('Creating folder with:', { name, path, userId });
+
     if (!name || name.trim() === '') {
       return res.status(400).json({
         success: false,
@@ -16,8 +17,8 @@ router.post('/', verifyToken, async (req, res) => {
       });
     }
 
-    // Cek apakah folder sudah ada
-    const { data: existingFolder } = await supabase
+    // Cek folder duplikat
+    const { data: existingFolder, error: checkError } = await supabase
       .from('folders')
       .select('*')
       .eq('user_id', userId)
@@ -33,22 +34,28 @@ router.post('/', verifyToken, async (req, res) => {
     }
 
     // Insert folder baru
-    const { data: folder, error } = await supabase
+    const { data: folder, error: insertError } = await supabase
       .from('folders')
-      .insert([{
+      .insert({
         name: name.trim(),
         path,
-        user_id: userId,
-        created_at: new Date().toISOString()
-      }])
+        user_id: userId
+      })
       .select()
       .single();
 
-    if (error) throw error;
+    if (insertError) throw insertError;
+
+    console.log('Folder created:', folder);
 
     res.json({
       success: true,
-      data: folder
+      data: {
+        id: folder.id,
+        name: folder.name,
+        type: 'folder',
+        created_at: folder.created_at
+      }
     });
 
   } catch (error) {

@@ -886,19 +886,22 @@ router.get('/preview/:id', verifyToken, async (req, res) => {
       .eq('user_id', userId)
       .single();
       
-    if (error) throw new Error('File tidak ditemukan');
+    if (error || !file) {
+      throw new Error('File tidak ditemukan');
+    }
 
-    // Generate signed URL dengan waktu kadaluarsa 24 jam
     const filePath = `${userId}/${file.path}/${file.filename}`.replace(/\/+/g, '/');
-    const { data: { signedUrl }, error: signedUrlError } = await supabase.storage
+    
+    // Buat signed URL dengan waktu kadaluarsa lebih pendek
+    const { data, error: signedUrlError } = await supabase.storage
       .from('files')
-      .createSignedUrl(filePath, 24 * 60 * 60); // 24 jam
+      .createSignedUrl(filePath, 3600); // 1 jam
 
     if (signedUrlError) throw signedUrlError;
 
     res.json({
       success: true,
-      url: signedUrl,
+      url: data.signedUrl,
       filename: file.original_name,
       mime_type: file.mime_type
     });
