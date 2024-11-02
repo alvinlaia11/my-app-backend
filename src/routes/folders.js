@@ -3,14 +3,12 @@ const router = express.Router();
 const { supabase } = require('../config/supabase');
 const { verifyToken } = require('../middleware/auth');
 
-router.use(verifyToken);
-
-// POST endpoint untuk membuat folder
 router.post('/', verifyToken, async (req, res) => {
   try {
     const { name, path = '' } = req.body;
     const userId = req.user.id;
 
+    // Validasi nama folder
     if (!name || name.trim() === '') {
       return res.status(400).json({
         success: false,
@@ -18,15 +16,31 @@ router.post('/', verifyToken, async (req, res) => {
       });
     }
 
-    // Insert ke database
+    // Cek apakah folder sudah ada
+    const { data: existingFolder } = await supabase
+      .from('folders')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('path', path)
+      .eq('name', name.trim())
+      .single();
+
+    if (existingFolder) {
+      return res.status(400).json({
+        success: false,
+        error: 'Folder dengan nama tersebut sudah ada'
+      });
+    }
+
+    // Insert folder baru
     const { data: folder, error } = await supabase
       .from('folders')
-      .insert({
-        name,
+      .insert([{
+        name: name.trim(),
         path,
         user_id: userId,
         created_at: new Date().toISOString()
-      })
+      }])
       .select()
       .single();
 
@@ -34,14 +48,14 @@ router.post('/', verifyToken, async (req, res) => {
 
     res.json({
       success: true,
-      folder
+      data: folder
     });
 
   } catch (error) {
     console.error('Create folder error:', error);
     res.status(500).json({
       success: false,
-      error: 'Gagal membuat folder: ' + error.message
+      error: error.message || 'Gagal membuat folder'
     });
   }
 });

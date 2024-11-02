@@ -5,6 +5,7 @@ const userRouter = require('./routes/user');
 const authRouter = require('./routes/auth');
 const casesRouter = require('./routes/cases');
 const filesRouter = require('./routes/files');
+const foldersRouter = require('./routes/folders');
 const { createClient } = require('@supabase/supabase-js');
 const { supabase } = require('./config/supabase');
 
@@ -86,6 +87,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/user', userRouter);
 app.use('/api/cases', casesRouter);
 app.use('/api/files', filesRouter);
+app.use('/api/files/folders', foldersRouter);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
