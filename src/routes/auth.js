@@ -408,7 +408,10 @@ router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
     
+    console.log('Login attempt:', { email });
+    
     if (!email || !password) {
+      console.log('Missing credentials');
       return res.status(400).json({
         success: false,
         error: 'Email dan password harus diisi'
@@ -420,6 +423,12 @@ router.post('/login', async (req, res) => {
       password
     });
 
+    console.log('Supabase login response:', { 
+      success: !error,
+      hasUser: !!data?.user,
+      error: error?.message 
+    });
+
     if (error) {
       return res.status(401).json({
         success: false,
@@ -428,6 +437,10 @@ router.post('/login', async (req, res) => {
     }
 
     const session = await supabase.auth.getSession();
+    console.log('Session data:', {
+      hasSession: !!session.data.session,
+      hasToken: !!session.data.session?.access_token
+    });
     
     res.json({
       success: true,
