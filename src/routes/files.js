@@ -23,7 +23,7 @@ router.get('/', async (req, res) => {
     // Ambil files
     const { data: files, error: filesError } = await supabase
       .from('files')
-      .select('*')
+      .select('id, filename, original_name, path, file_url, mime_type, created_at, name')
       .eq('user_id', userId)
       .eq('path', path || '');
 
@@ -35,7 +35,7 @@ router.get('/', async (req, res) => {
     // Ambil folders
     const { data: folders, error: foldersError } = await supabase
       .from('folders')
-      .select('*')
+      .select('id, name, path, created_at')
       .eq('user_id', userId)
       .eq('path', path || '');
 
@@ -44,16 +44,29 @@ router.get('/', async (req, res) => {
       throw foldersError;
     }
 
+    // Transform files data
+    const transformedFiles = files.map(file => ({
+      ...file,
+      type: 'file',
+      name: file.original_name || file.filename
+    }));
+
+    // Transform folders data
+    const transformedFolders = folders.map(folder => ({
+      ...folder,
+      type: 'folder'
+    }));
+
     console.log('Found:', {
-      filesCount: files?.length || 0,
-      foldersCount: folders?.length || 0
+      filesCount: transformedFiles.length,
+      foldersCount: transformedFolders.length
     });
 
     res.json({
       success: true,
       data: {
-        files: files || [],
-        folders: folders || []
+        files: transformedFiles,
+        folders: transformedFolders
       }
     });
 
