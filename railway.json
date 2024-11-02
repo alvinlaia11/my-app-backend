@@ -7,7 +7,7 @@
     "deploy": {
       "restartPolicyType": "ON_FAILURE",
       "restartPolicyMaxRetries": 10,
-      "startCommand": "npm start",
+      "startCommand": "node src/server.js",
       "healthcheckPath": "/health",
       "healthcheckTimeout": 10000,
       "healthcheckInterval": 30000
