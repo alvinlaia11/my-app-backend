@@ -891,23 +891,16 @@ router.get('/preview/:id', verifyToken, async (req, res) => {
       
     if (error) throw new Error('File tidak ditemukan');
 
-    const filePath = `${userId}/${file.path}/${file.filename}`.replace(/\/+/g, '/');
-    
-    // Buat signed URL dengan waktu kadaluarsa yang lebih lama
-    const { data: { signedUrl }, error: signedUrlError } = await supabase.storage
+    // Generate URL publik langsung
+    const { data: { publicUrl }, error: urlError } = supabase.storage
       .from('files')
-      .createSignedUrl(filePath, 3600, {
-        download: false,
-        transform: {
-          quality: 75 // Optimasi kualitas gambar
-        }
-      });
+      .getPublicUrl(`${userId}/${file.path}/${file.filename}`);
 
-    if (signedUrlError) throw signedUrlError;
+    if (urlError) throw urlError;
 
     res.json({
       success: true,
-      url: signedUrl,
+      url: publicUrl,
       filename: file.original_name,
       mime_type: file.mime_type
     });
