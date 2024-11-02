@@ -10,8 +10,6 @@ router.post('/signin', async (req, res) => {
   try {
     const { email, password } = req.body;
     
-    console.log('Signin attempt:', { email });
-    
     if (!email || !password) {
       return res.status(400).json({
         success: false,
@@ -19,6 +17,21 @@ router.post('/signin', async (req, res) => {
       });
     }
 
+    // Coba dapatkan user dari database terlebih dahulu
+    const { data: userProfile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('email', email)
+      .single();
+
+    if (profileError) {
+      return res.status(401).json({
+        success: false,
+        error: 'Email atau password salah'
+      });
+    }
+
+    // Login dengan Supabase Auth
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
@@ -32,20 +45,27 @@ router.post('/signin', async (req, res) => {
       });
     }
 
-    const { data: sessionData } = await supabase.auth.getSession();
-    
+    // Set session
+    const { data: session } = await supabase.auth.setSession({
+      access_token: data.session.access_token,
+      refresh_token: data.session.refresh_token
+    });
+
     res.json({
       success: true,
-      user: data.user,
-      session: sessionData.session,
-      token: sessionData.session?.access_token
+      user: {
+        ...data.user,
+        profile: userProfile
+      },
+      session: session.session,
+      token: session.session.access_token
     });
 
   } catch (error) {
     console.error('Signin error:', error);
     res.status(500).json({
       success: false,
-      error: 'Gagal melakukan login: ' + error.message
+      error: 'Gagal melakukan login'
     });
   }
 });
