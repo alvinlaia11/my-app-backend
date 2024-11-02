@@ -21,11 +21,19 @@ const verifyToken = async (req, res, next) => {
       });
     }
 
-    // Set basic user data
+    // Ambil data profil user
+    const { data: profile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('user_id', user.id)
+      .single();
+
+    // Set user data lengkap
     req.user = {
       id: user.id,
       email: user.email,
-      role: user.user_metadata?.role || 'user'
+      role: profile?.role || 'user',
+      profile: profile || null
     };
     
     next();

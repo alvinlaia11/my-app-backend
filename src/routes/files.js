@@ -10,7 +10,6 @@ router.use(verifyToken);
 // GET files dan folders
 router.get('/', verifyToken, async (req, res) => {
   try {
-    // Tambahkan validasi user
     if (!req.user || !req.user.id) {
       return res.status(401).json({
         success: false,
@@ -23,40 +22,45 @@ router.get('/', verifyToken, async (req, res) => {
     
     console.log('Fetching files for:', { userId, path });
 
-    // Get folders
+    // Get folders dengan error handling yang lebih baik
     const { data: folders, error: foldersError } = await supabase
       .from('folders')
       .select('*')
       .eq('user_id', userId)
-      .eq('path', path);
+      .eq('path', path || '');
 
     if (foldersError) {
       console.error('Folders error:', foldersError);
       throw foldersError;
     }
 
-    // Get files
+    // Get files dengan error handling yang lebih baik
     const { data: files, error: filesError } = await supabase
       .from('files')
       .select('*')
       .eq('user_id', userId)
-      .eq('path', path);
+      .eq('path', path || '');
 
     if (filesError) {
       console.error('Files error:', filesError);
       throw filesError;
     }
 
+    console.log('Files and folders found:', {
+      foldersCount: folders?.length || 0,
+      filesCount: files?.length || 0
+    });
+
     res.json({
       success: true,
       data: {
-        folders: folders.map(folder => ({
+        folders: (folders || []).map(folder => ({
           id: folder.id,
           name: folder.name,
           type: 'folder',
           created_at: folder.created_at
         })),
-        files: files.map(file => ({
+        files: (files || []).map(file => ({
           id: file.id,
           name: file.original_name,
           type: 'file',
@@ -68,8 +72,8 @@ router.get('/', verifyToken, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Get files error:', error);
-    res.status(error.status || 500).json({
+    console.error('Error fetching files and folders:', error);
+    res.status(500).json({
       success: false,
       error: error.message || 'Gagal mengambil data files dan folders'
     });
