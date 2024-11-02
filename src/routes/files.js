@@ -20,10 +20,18 @@ router.get('/', async (req, res) => {
 
     console.log('Fetching files for:', { userId, path });
 
+    // Validasi user
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'User tidak terautentikasi'
+      });
+    }
+
     // Ambil files
     const { data: files, error: filesError } = await supabase
       .from('files')
-      .select('id, filename, original_name, path, file_url, mime_type, created_at, name')
+      .select('*')
       .eq('user_id', userId)
       .eq('path', path || '');
 
@@ -35,7 +43,7 @@ router.get('/', async (req, res) => {
     // Ambil folders
     const { data: folders, error: foldersError } = await supabase
       .from('folders')
-      .select('id, name, path, created_at')
+      .select('*')
       .eq('user_id', userId)
       .eq('path', path || '');
 
@@ -44,29 +52,16 @@ router.get('/', async (req, res) => {
       throw foldersError;
     }
 
-    // Transform files data
-    const transformedFiles = files.map(file => ({
-      ...file,
-      type: 'file',
-      name: file.original_name || file.filename
-    }));
-
-    // Transform folders data
-    const transformedFolders = folders.map(folder => ({
-      ...folder,
-      type: 'folder'
-    }));
-
     console.log('Found:', {
-      filesCount: transformedFiles.length,
-      foldersCount: transformedFolders.length
+      filesCount: files?.length || 0,
+      foldersCount: folders?.length || 0
     });
 
     res.json({
       success: true,
       data: {
-        files: transformedFiles,
-        folders: transformedFolders
+        files: files || [],
+        folders: folders || []
       }
     });
 
