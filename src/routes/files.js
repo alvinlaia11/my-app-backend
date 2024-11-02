@@ -895,14 +895,22 @@ router.get('/preview/:id', verifyToken, async (req, res) => {
     const filePath = `${userId}/${file.path}/${file.filename}`.replace(/\/+/g, '/');
     const { data: { signedUrl }, error: signedUrlError } = await supabase.storage
       .from('files')
-      .createSignedUrl(filePath, 3600); // URL valid selama 1 jam
+      .createSignedUrl(filePath, 3600, {
+        download: false,
+        transform: {
+          width: 1200,
+          height: 800,
+          resize: 'contain'
+        }
+      });
 
     if (signedUrlError) throw signedUrlError;
 
     res.json({
       success: true,
       url: signedUrl,
-      filename: file.original_name
+      filename: file.original_name,
+      mime_type: file.mime_type
     });
 
   } catch (error) {
