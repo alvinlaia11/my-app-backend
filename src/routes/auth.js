@@ -32,14 +32,13 @@ router.post('/signin', async (req, res) => {
       });
     }
 
-    // Get session after successful login
-    const { data: session } = await supabase.auth.getSession();
-
+    const { data: sessionData } = await supabase.auth.getSession();
+    
     res.json({
       success: true,
       user: data.user,
-      session: session.session,
-      token: session.session?.access_token
+      session: sessionData.session,
+      token: sessionData.session?.access_token
     });
 
   } catch (error) {
