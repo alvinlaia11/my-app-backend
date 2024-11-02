@@ -3,8 +3,14 @@ const router = express.Router();
 const path = require('path');
 const { supabase } = require('../config/supabase');
 const { verifyToken } = require('../middleware/auth');
+const fileUpload = require('express-fileupload');
 
 router.use(verifyToken);
+router.use(fileUpload({
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max-file-size
+  useTempFiles: true,
+  tempFileDir: '/tmp/'
+}));
 
 // GET files dan folders
 router.get('/', async (req, res) => {
@@ -12,6 +18,7 @@ router.get('/', async (req, res) => {
     const { path = '' } = req.query;
     const userId = req.user.userId;
 
+    // Ambil files
     const { data: files, error: filesError } = await supabase
       .from('files')
       .select('*')
@@ -21,6 +28,7 @@ router.get('/', async (req, res) => {
 
     if (filesError) throw filesError;
 
+    // Ambil folders
     const { data: folders, error: foldersError } = await supabase
       .from('folders')
       .select('*')
@@ -32,38 +40,24 @@ router.get('/', async (req, res) => {
 
     res.json({
       success: true,
-      files: files.map(file => ({
-        id: file.id,
-        name: file.original_name || file.filename,
-        url: file.file_url,
-        created_at: file.created_at,
-        type: 'file'
-      })),
-      folders: folders.map(folder => ({
-        id: folder.id,
-        name: folder.name,
-        type: 'folder',
-        created_at: folder.created_at
-      }))
+      data: {
+        files: files || [],
+        folders: folders || []
+      }
     });
+
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error fetching files and folders:', error);
     res.status(500).json({
       success: false,
-      error: error.message
+      error: 'Gagal mengambil data files dan folders: ' + error.message
     });
   }
 });
 
 // POST endpoint untuk upload file
-router.post('/upload', verifyToken, async (req, res) => {
+router.post('/upload', async (req, res) => {
   try {
-    // Debug request
-    console.log('Headers:', req.headers);
-    console.log('Files:', req.files);
-    console.log('Body:', req.body);
-
-    // Validasi file
     if (!req.files || !req.files.file) {
       return res.status(400).json({
         success: false,
@@ -75,14 +69,11 @@ router.post('/upload', verifyToken, async (req, res) => {
     const userId = req.user.userId;
     const uploadPath = req.body.path || '';
 
-    // Validasi file
-    validateFile(file);
-
-    // Proses upload
+    // Generate unique filename
     const filename = `${Date.now()}-${file.name}`;
     const filePath = `${userId}/${uploadPath}/${filename}`.replace(/\/+/g, '/');
 
-    // Upload ke storage
+    // Upload ke Supabase Storage
     const { error: uploadError } = await supabase.storage
       .from('files')
       .upload(filePath, file.data, {
@@ -91,34 +82,36 @@ router.post('/upload', verifyToken, async (req, res) => {
 
     if (uploadError) throw uploadError;
 
-    // Dapatkan URL file
+    // Get public URL
     const { data: { publicUrl } } = supabase.storage
       .from('files')
       .getPublicUrl(filePath);
 
-    // Simpan metadata ke tabel files (tanpa kolom size)
-    const { error: dbError } = await supabase
+    // Simpan metadata ke database
+    const { data: fileData, error: dbError } = await supabase
       .from('files')
       .insert({
-        filename: filename,
+        filename,
         original_name: file.name,
         path: uploadPath,
         file_url: publicUrl,
         mime_type: file.mimetype,
         user_id: userId
-      });
+      })
+      .select()
+      .single();
 
     if (dbError) throw dbError;
 
     res.json({
       success: true,
-      message: 'File berhasil diupload'
+      file: fileData
     });
 
   } catch (error) {
     console.error('Upload error:', error);
     res.status(500).json({
-      success: false,
+      success: false, 
       error: 'Gagal mengupload file: ' + error.message
     });
   }
