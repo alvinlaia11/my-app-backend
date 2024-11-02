@@ -83,83 +83,59 @@ router.get('/', async (req, res) => {
 // POST endpoint untuk upload file
 router.post('/upload', async (req, res) => {
   try {
-    console.log('Upload request received:', {
-      files: !!req.files,
-      body: req.body,
-      headers: req.headers
-    });
-
-    if (!req.files || !req.files.file) {
-      return res.status(400).json({
+    if (!req.user?.id) {
+      return res.status(401).json({
         success: false,
-        error: 'File harus diupload'
+        error: 'Unauthorized'
       });
     }
 
-    const file = req.files.file;
-    const userId = req.user.id;
-    const uploadPath = req.body.path || '';
+    const file = req.files?.file;
+    const path = req.body.path || '';
 
-    // Validasi ukuran dan tipe file
-    const maxSize = 10 * 1024 * 1024; // 10MB
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf'];
-    
-    if (file.size > maxSize) {
+    if (!file) {
       return res.status(400).json({
         success: false,
-        error: 'Ukuran file melebihi batas maksimum (10MB)'
+        error: 'No file uploaded'
       });
     }
 
-    if (!allowedTypes.includes(file.mimetype)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Tipe file tidak didukung'
-      });
-    }
-
-    // Generate unique filename
-    const filename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '')}`;
-    const filePath = `${userId}/${uploadPath}/${filename}`.replace(/\/+/g, '/');
-
-    // Upload ke Supabase Storage
-    const { data, error: uploadError } = await supabase.storage
+    // Upload ke storage bucket
+    const { data: uploadData, error: uploadError } = await supabase.storage
       .from('files')
-      .upload(filePath, file.data, {
-        cacheControl: '3600',
-        upsert: false,
-        contentType: file.mimetype
-      });
+      .upload(`${req.user.id}/${path}/${file.name}`, file.data);
 
-    if (uploadError) throw uploadError;
+    if (uploadError) {
+      throw uploadError;
+    }
 
     // Dapatkan public URL
-    const { data: { publicUrl }, error: urlError } = supabase.storage
+    const { data: publicUrlData } = await supabase.storage
       .from('files')
-      .getPublicUrl(filePath);
+      .getPublicUrl(`${req.user.id}/${path}/${file.name}`);
 
-    if (urlError) throw urlError;
-
-    // Simpan metadata ke database
-    const { data: fileData, error: dbError } = await supabase
+    // Simpan data file ke database
+    const { data: fileData, error: insertError } = await supabase
       .from('files')
       .insert({
-        filename,
+        user_id: req.user.id,
         original_name: file.name,
-        mime_type: file.mimetype,
+        path: path,
         size: file.size,
-        path: uploadPath,
-        user_id: userId,
-        public_url: publicUrl
+        mime_type: file.mimetype,
+        storage_path: uploadData.path,
+        public_url: publicUrlData.publicUrl
       })
       .select()
       .single();
 
-    if (dbError) throw dbError;
+    if (insertError) {
+      throw insertError;
+    }
 
     res.json({
       success: true,
-      file: fileData
+      data: fileData
     });
 
   } catch (error) {
