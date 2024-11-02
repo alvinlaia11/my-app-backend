@@ -46,7 +46,16 @@ const verifyAdmin = async (req, res, next) => {
       });
     }
 
-    if (req.user.role !== 'admin') {
+    // Ambil data user profile untuk cek role
+    const { data: profile, error } = await supabase
+      .from('user_profiles')
+      .select('role')
+      .eq('user_id', req.user.id)
+      .single();
+
+    if (error) throw error;
+
+    if (!profile || profile.role !== 'admin') {
       return res.status(403).json({
         success: false,
         error: 'Akses ditolak. Hanya admin yang diizinkan.'
@@ -94,8 +103,26 @@ const validateSession = async (req, res, next) => {
   }
 };
 
+const checkAdmin = async (req, res, next) => {
+  try {
+    if (!req.user || req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        error: 'Akses ditolak: Memerlukan hak akses admin'
+      });
+    }
+    next();
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Error checking admin status: ' + error.message
+    });
+  }
+};
+
 module.exports = {
   verifyToken,
   verifyAdmin,
-  validateSession
+  validateSession,
+  checkAdmin
 };

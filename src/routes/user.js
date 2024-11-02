@@ -146,4 +146,98 @@ router.put('/profile', verifyToken, async (req, res) => {
   }
 });
 
+// GET /api/user/all - Mengambil semua user (admin only)
+router.get('/all', verifyToken, async (req, res) => {
+  try {
+    // Cek apakah user adalah admin
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        error: 'Akses ditolak: Hanya admin yang dapat mengakses'
+      });
+    }
+
+    const { data: users, error } = await supabase.auth.admin.listUsers();
+
+    if (error) throw error;
+
+    // Ambil data tambahan dari user_profiles
+    const { data: profiles, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('*');
+
+    if (profileError) throw profileError;
+
+    // Gabungkan data users dengan profiles
+    const enrichedUsers = users.users.map(user => {
+      const profile = profiles.find(p => p.user_id === user.id) || {};
+      return {
+        ...user,
+        profile
+      };
+    });
+
+    res.json({
+      success: true,
+      users: enrichedUsers
+    });
+
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Gagal mengambil data pengguna: ' + error.message
+    });
+  }
+});
+
+// POST /api/user/create - Membuat user baru (admin only)
+router.post('/create', verifyToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        error: 'Akses ditolak: Hanya admin yang dapat membuat user'
+      });
+    }
+
+    const { email, password, username, role = 'user' } = req.body;
+
+    // Buat user baru di Supabase Auth
+    const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { username, role }
+    });
+
+    if (createError) throw createError;
+
+    // Buat profil user
+    const { error: profileError } = await supabase
+      .from('user_profiles')
+      .insert({
+        user_id: newUser.user.id,
+        email,
+        username,
+        role,
+        created_at: new Date().toISOString()
+      });
+
+    if (profileError) throw profileError;
+
+    res.json({
+      success: true,
+      user: newUser.user
+    });
+
+  } catch (error) {
+    console.error('Error creating user:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Gagal membuat user: ' + error.message
+    });
+  }
+});
+
 module.exports = router; 

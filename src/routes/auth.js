@@ -207,7 +207,8 @@ router.post('/verify', verifyToken, async (req, res) => {
 // GET /api/auth/users (Admin only)
 router.get('/users', verifyToken, verifyAdmin, async (req, res) => {
   try {
-    // Ambil semua user profiles
+    console.log('Fetching users, requester:', req.user.id);
+    
     const { data: profiles, error: profilesError } = await supabase
       .from('user_profiles')
       .select(`
@@ -220,7 +221,12 @@ router.get('/users', verifyToken, verifyAdmin, async (req, res) => {
       `)
       .order('created_at', { ascending: false });
 
-    if (profilesError) throw profilesError;
+    if (profilesError) {
+      console.error('Error fetching profiles:', profilesError);
+      throw profilesError;
+    }
+
+    console.log('Found profiles:', profiles.length);
 
     const formattedUsers = profiles.map(profile => ({
       id: profile.user_id,
@@ -241,7 +247,7 @@ router.get('/users', verifyToken, verifyAdmin, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error fetching users:', error);
+    console.error('Error in /users endpoint:', error);
     res.status(500).json({
       success: false,
       error: 'Gagal mengambil data pengguna: ' + error.message
