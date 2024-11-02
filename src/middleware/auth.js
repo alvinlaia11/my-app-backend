@@ -2,32 +2,31 @@ const { supabase } = require('../config/supabase');
 
 const verifyToken = async (req, res, next) => {
   try {
-    const authHeader = req.headers.authorization;
-    console.log('Auth header:', authHeader);
+    console.log('Request headers:', req.headers);
+    const token = req.headers.authorization?.split(' ')[1];
+    
+    if (!token) {
+      console.log('No token provided');
+      return res.status(401).json({
+        success: false,
+        error: 'Token tidak ditemukan'
+      });
+    }
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.log('Invalid auth header format');
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    
+    if (error) {
+      console.error('Token verification error:', error);
       return res.status(401).json({
         success: false,
         error: 'Token tidak valid'
       });
     }
 
-    const token = authHeader.split(' ')[1];
-    console.log('Extracted token:', token);
-
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-    console.log('Auth result:', { user, error });
-
-    if (error || !user) {
-      console.log('Auth failed:', error);
-      throw new Error('Token tidak valid');
-    }
-
     req.user = {
       userId: user.id,
       email: user.email,
-      role: user.user_metadata?.role || 'user'
+      role: user.role
     };
 
     next();
@@ -35,7 +34,7 @@ const verifyToken = async (req, res, next) => {
     console.error('Auth middleware error:', error);
     res.status(401).json({
       success: false,
-      error: 'Token tidak valid'
+      error: 'Gagal memverifikasi token'
     });
   }
 };

@@ -1,11 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const authRoutes = require('./auth');
-const userRoutes = require('./user');
-const casesRoutes = require('./cases');
 
-router.use('/auth', authRoutes);
-router.use('/user', userRoutes);
-router.use('/cases', casesRoutes);
+// Import route handlers
+const filesRouter = require('./files');
+const foldersRouter = require('./folders');
+
+// Mount routes
+router.use('/files', filesRouter);
+router.use('/folders', foldersRouter);
 
 module.exports = router; 
