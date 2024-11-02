@@ -182,7 +182,38 @@ router.post('/create-user', verifyToken, verifyAdmin, async (req, res) => {
 
 // Endpoint verifikasi yang sudah ada
 router.post('/verify', async (req, res) => {
-  // ... kode yang sudah ada
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        error: 'Token tidak ditemukan'
+      });
+    }
+
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    
+    if (error || !user) {
+      return res.status(401).json({
+        success: false,
+        error: 'Token tidak valid'
+      });
+    }
+
+    res.json({
+      success: true,
+      user: user,
+      role: user.user_metadata?.role || 'user'
+    });
+
+  } catch (error) {
+    console.error('Token verification error:', error);
+    res.status(401).json({
+      success: false,
+      error: 'Token tidak valid'
+    });
+  }
 });
 
 // GET /api/auth/users
