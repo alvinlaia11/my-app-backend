@@ -505,31 +505,4 @@ router.post('/login', async (req, res) => {
   }
 });
 
-const verifyAdmin = async (req, res, next) => {
-  try {
-    const { data: profile, error } = await supabase
-      .from('user_profiles')
-      .select('role')
-      .eq('user_id', req.user.id)
-      .single();
-
-    if (error) throw error;
-
-    if (profile.role !== 'admin') {
-      return res.status(403).json({
-        success: false,
-        error: 'Akses ditolak: Membutuhkan hak akses admin'
-      });
-    }
-
-    next();
-  } catch (error) {
-    console.error('Admin verification error:', error);
-    res.status(403).json({
-      success: false,
-      error: 'Gagal memverifikasi hak akses admin'
-    });
-  }
-};
-
 module.exports = router;

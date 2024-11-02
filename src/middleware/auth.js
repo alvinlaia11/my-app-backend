@@ -25,11 +25,19 @@ const verifyToken = async (req, res, next) => {
 
 const verifyAdmin = async (req, res, next) => {
   try {
-    if (!req.user) {
+    if (!req.user || !req.user.userId) {
       throw new Error('User tidak terautentikasi');
     }
 
-    if (req.user.role !== 'admin') {
+    const { data: profile, error } = await supabase
+      .from('user_profiles')
+      .select('role')
+      .eq('user_id', req.user.userId)
+      .single();
+
+    if (error) throw error;
+
+    if (!profile || profile.role !== 'admin') {
       return res.status(403).json({
         success: false,
         error: 'Akses ditolak. Hanya admin yang diizinkan.'
@@ -41,7 +49,7 @@ const verifyAdmin = async (req, res, next) => {
     console.error('Admin verification error:', error);
     res.status(403).json({
       success: false,
-      error: 'Akses ditolak'
+      error: 'Akses ditolak: ' + error.message
     });
   }
 };
