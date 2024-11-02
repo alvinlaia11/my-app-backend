@@ -4,6 +4,7 @@ const fileUpload = require('express-fileupload');
 const userRouter = require('./routes/user');
 const authRouter = require('./routes/auth');
 const casesRouter = require('./routes/cases');
+const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 
@@ -25,8 +26,15 @@ app.use((req, res, next) => {
 });
 
 // Health check endpoint
-app.get('/health', (req, res) => {
+app.get('/health', async (req, res) => {
   try {
+    // Test Supabase connection
+    const { error: supabaseError } = await supabase.auth.getSession();
+    
+    if (supabaseError) {
+      throw new Error(`Supabase connection failed: ${supabaseError.message}`);
+    }
+
     res.json({
       status: 'ok',
       timestamp: new Date().toISOString(),
@@ -35,14 +43,23 @@ app.get('/health', (req, res) => {
       env: {
         nodeEnv: process.env.NODE_ENV,
         hasSupabaseUrl: !!process.env.SUPABASE_URL,
-        hasSupabaseKey: !!process.env.SUPABASE_ANON_KEY
-      }
+        hasSupabaseKey: !!process.env.SUPABASE_ANON_KEY,
+        hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+        port: process.env.PORT,
+        frontendUrl: process.env.FRONTEND_URL
+      },
+      memory: process.memoryUsage()
     });
   } catch (error) {
     console.error('Health check error:', error);
     res.status(500).json({
       status: 'error',
-      message: error.message
+      message: error.message,
+      timestamp: new Date().toISOString(),
+      details: {
+        name: error.name,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      }
     });
   }
 });
@@ -79,16 +96,19 @@ app.use((req, res) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on port ${PORT}`);
-});
 
+// Tambahkan logging saat startup
 console.log('Starting server with config:', {
   port: PORT,
   nodeEnv: process.env.NODE_ENV,
   hasSupabaseUrl: !!process.env.SUPABASE_URL,
   hasSupabaseKey: !!process.env.SUPABASE_ANON_KEY,
+  hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
   corsOrigin: process.env.FRONTEND_URL || 'http://localhost:3000'
+});
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT}`);
 });
 
 module.exports = app;
