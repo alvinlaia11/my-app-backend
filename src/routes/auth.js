@@ -219,19 +219,57 @@ router.post('/verify', async (req, res) => {
 // GET /api/auth/users
 router.get('/users', verifyToken, async (req, res) => {
   try {
-    const { data: { users }, error } = await supabase.auth.admin.listUsers();
+    // Cek apakah user adalah admin
+    const { data: userProfile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('role')
+      .eq('user_id', req.user.id)
+      .single();
+
+    if (profileError) throw profileError;
     
-    if (error) throw error;
+    if (userProfile.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        error: 'Akses ditolak'
+      });
+    }
+
+    // Ambil data semua user beserta profilnya
+    const { data: users, error: usersError } = await supabase
+      .from('user_profiles')
+      .select(`
+        *,
+        auth_users:user_id (
+          email,
+          created_at,
+          last_sign_in_at
+        )
+      `);
+
+    if (usersError) throw usersError;
 
     res.json({
       success: true,
-      users: users
+      users: users.map(user => ({
+        id: user.user_id,
+        email: user.auth_users?.email,
+        username: user.username,
+        role: user.role,
+        position: user.position,
+        phone: user.phone,
+        office: user.office,
+        status: user.status,
+        created_at: user.created_at,
+        last_login: user.auth_users?.last_sign_in_at
+      }))
     });
+
   } catch (error) {
     console.error('Error fetching users:', error);
     res.status(500).json({
       success: false,
-      error: 'Gagal mengambil data pengguna'
+      error: 'Gagal mengambil data pengguna: ' + error.message
     });
   }
 });

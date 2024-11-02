@@ -10,8 +10,17 @@ router.use(verifyToken);
 // GET files dan folders
 router.get('/', verifyToken, async (req, res) => {
   try {
+    // Tambahkan validasi user
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        error: 'Unauthorized: User ID tidak ditemukan'
+      });
+    }
+
     const userId = req.user.id;
     const { path = '' } = req.query;
+    
     console.log('Fetching files for:', { userId, path });
 
     // Get folders
@@ -21,7 +30,10 @@ router.get('/', verifyToken, async (req, res) => {
       .eq('user_id', userId)
       .eq('path', path);
 
-    if (foldersError) throw foldersError;
+    if (foldersError) {
+      console.error('Folders error:', foldersError);
+      throw foldersError;
+    }
 
     // Get files
     const { data: files, error: filesError } = await supabase
@@ -30,38 +42,36 @@ router.get('/', verifyToken, async (req, res) => {
       .eq('user_id', userId)
       .eq('path', path);
 
-    if (filesError) throw filesError;
-
-    // Transform data
-    const transformedFolders = folders.map(folder => ({
-      id: folder.id,
-      name: folder.name,
-      type: 'folder',
-      created_at: folder.created_at
-    }));
-
-    const transformedFiles = files.map(file => ({
-      id: file.id,
-      name: file.original_name,
-      type: 'file',
-      size: file.size,
-      mime_type: file.mime_type,
-      created_at: file.created_at
-    }));
+    if (filesError) {
+      console.error('Files error:', filesError);
+      throw filesError;
+    }
 
     res.json({
       success: true,
       data: {
-        folders: transformedFolders,
-        files: transformedFiles
+        folders: folders.map(folder => ({
+          id: folder.id,
+          name: folder.name,
+          type: 'folder',
+          created_at: folder.created_at
+        })),
+        files: files.map(file => ({
+          id: file.id,
+          name: file.original_name,
+          type: 'file',
+          size: file.size,
+          mime_type: file.mime_type,
+          created_at: file.created_at
+        }))
       }
     });
 
   } catch (error) {
     console.error('Get files error:', error);
-    res.status(500).json({
+    res.status(error.status || 500).json({
       success: false,
-      error: 'Gagal mengambil data files dan folders'
+      error: error.message || 'Gagal mengambil data files dan folders'
     });
   }
 });
