@@ -13,10 +13,10 @@ router.use(fileUpload({
 }));
 
 // GET files dan folders
-router.get('/', async (req, res) => {
+router.get('/', verifyToken, async (req, res) => {
   try {
     const { path = '' } = req.query;
-    const userId = req.user.userId;
+    const userId = req.user.id;
 
     console.log('Fetching files for:', { userId, path });
 

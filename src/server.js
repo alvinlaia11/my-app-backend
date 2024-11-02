@@ -4,6 +4,7 @@ const fileUpload = require('express-fileupload');
 const userRouter = require('./routes/user');
 const authRouter = require('./routes/auth');
 const casesRouter = require('./routes/cases');
+const filesRouter = require('./routes/files');
 const { createClient } = require('@supabase/supabase-js');
 const { supabase } = require('./config/supabase');
 
@@ -72,6 +73,7 @@ app.get('/health', async (req, res) => {
 app.use('/api/auth', authRouter);
 app.use('/api/user', userRouter);
 app.use('/api/cases', casesRouter);
+app.use('/api/files', filesRouter);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

@@ -2,39 +2,27 @@ const { supabase } = require('../config/supabase');
 
 const verifyToken = async (req, res, next) => {
   try {
-    console.log('Request headers:', req.headers);
     const token = req.headers.authorization?.split(' ')[1];
+    console.log('Auth check:', {
+      hasToken: !!token,
+      headers: req.headers
+    });
     
     if (!token) {
-      console.log('No token provided');
-      return res.status(401).json({
-        success: false,
-        error: 'Token tidak ditemukan'
-      });
+      throw new Error('Token tidak ditemukan');
     }
 
     const { data: { user }, error } = await supabase.auth.getUser(token);
     
-    if (error) {
-      console.error('Token verification error:', error);
-      return res.status(401).json({
-        success: false,
-        error: 'Token tidak valid'
-      });
-    }
-
-    req.user = {
-      userId: user.id,
-      email: user.email,
-      role: user.role
-    };
-
+    if (error) throw error;
+    
+    req.user = user;
     next();
   } catch (error) {
-    console.error('Auth middleware error:', error);
+    console.error('Auth error:', error);
     res.status(401).json({
       success: false,
-      error: 'Gagal memverifikasi token'
+      error: 'Unauthorized'
     });
   }
 };
