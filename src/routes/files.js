@@ -4,6 +4,7 @@ const path = require('path');
 const { supabase } = require('../config/supabase');
 const { verifyToken } = require('../middleware/auth');
 const fileUpload = require('express-fileupload');
+const archiver = require('archiver');
 
 router.use(verifyToken);
 // GET files dan folders
@@ -933,6 +934,70 @@ router.get('/preview/:id', verifyToken, async (req, res) => {
     res.status(error.message.includes('tidak ditemukan') ? 404 : 500).json({
       success: false,
       error: error.message || 'Gagal mendapatkan preview file'
+    });
+  }
+});
+
+// Tambahkan endpoint untuk download folder
+router.get('/download-folder/:id', verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    // Dapatkan informasi folder
+    const { data: folder, error: folderError } = await supabase
+      .from('folders')
+      .select('*')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .single();
+
+    if (folderError) throw folderError;
+    if (!folder) {
+      return res.status(404).json({
+        success: false,
+        error: 'Folder tidak ditemukan'
+      });
+    }
+
+    // Set header untuk download zip
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename=${folder.name}.zip`);
+
+    // Buat zip stream
+    const archive = archiver('zip', {
+      zlib: { level: 9 }
+    });
+
+    // Pipe archive ke response
+    archive.pipe(res);
+
+    // Dapatkan semua file dalam folder
+    const { data: files, error: filesError } = await supabase
+      .from('files')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('path', folder.path + '/' + folder.name);
+
+    if (filesError) throw filesError;
+
+    // Tambahkan file ke archive
+    for (const file of files) {
+      const { data } = await supabase.storage
+        .from('files')
+        .download(`${userId}/${file.path}/${file.filename}`);
+
+      archive.append(await data.arrayBuffer(), { name: file.original_name });
+    }
+
+    // Finalisasi archive
+    await archive.finalize();
+
+  } catch (error) {
+    console.error('Download folder error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Gagal mengunduh folder: ' + error.message
     });
   }
 });
