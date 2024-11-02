@@ -8,7 +8,7 @@ const archiver = require('archiver');
 
 router.use(verifyToken);
 // GET files dan folders
-router.get('/', verifyToken, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     if (!req.user || !req.user.id) {
       return res.status(401).json({
