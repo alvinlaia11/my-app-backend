@@ -22,18 +22,6 @@ router.get('/', async (req, res) => {
     
     console.log('Fetching files for:', { userId, path });
 
-    // Get folders dengan error handling yang lebih baik
-    const { data: folders, error: foldersError } = await supabase
-      .from('folders')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('path', path || '');
-
-    if (foldersError) {
-      console.error('Folders error:', foldersError);
-      throw foldersError;
-    }
-
     // Get files dengan error handling yang lebih baik
     const { data: files, error: filesError } = await supabase
       .from('files')
@@ -46,10 +34,56 @@ router.get('/', async (req, res) => {
       throw filesError;
     }
 
-    console.log('Files and folders found:', {
-      foldersCount: folders?.length || 0,
-      filesCount: files?.length || 0
-    });
+    // Dapatkan public URL dan preview URL untuk setiap file
+    const filesWithUrls = await Promise.all((files || []).map(async (file) => {
+      const filePath = `${userId}/${file.path}/${file.filename}`.replace(/\/+/g, '/');
+      
+      // Dapatkan signed URL
+      const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+        .from('files')
+        .createSignedUrl(filePath, 3600); // URL valid selama 1 jam
+
+      if (signedUrlError) {
+        console.error('Signed URL error:', signedUrlError);
+        return null;
+      }
+
+      // Dapatkan public URL
+      const { data: publicUrlData } = await supabase.storage
+        .from('files')
+        .getPublicUrl(filePath);
+
+      const previewUrl = getPreviewUrl(file, signedUrlData.signedUrl);
+
+      return {
+        id: file.id,
+        name: file.original_name,
+        type: 'file',
+        size: file.size,
+        mime_type: file.mime_type,
+        created_at: file.created_at,
+        url: publicUrlData.publicUrl,
+        preview_url: previewUrl,
+        path: file.path,
+        filename: file.filename,
+        can_preview: ['application/pdf', 'image/jpeg', 'image/png', 'image/gif'].includes(file.mime_type.toLowerCase())
+      };
+    }));
+
+    // Filter out null values (failed to get URLs)
+    const validFiles = filesWithUrls.filter(file => file !== null);
+
+    // Get folders
+    const { data: folders, error: foldersError } = await supabase
+      .from('folders')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('path', path || '');
+
+    if (foldersError) {
+      console.error('Folders error:', foldersError);
+      throw foldersError;
+    }
 
     res.json({
       success: true,
@@ -58,16 +92,10 @@ router.get('/', async (req, res) => {
           id: folder.id,
           name: folder.name,
           type: 'folder',
-          created_at: folder.created_at
+          created_at: folder.created_at,
+          path: folder.path
         })),
-        files: (files || []).map(file => ({
-          id: file.id,
-          name: file.original_name,
-          type: 'file',
-          size: file.size,
-          mime_type: file.mime_type,
-          created_at: file.created_at
-        }))
+        files: validFiles
       }
     });
 
@@ -92,7 +120,6 @@ router.post('/upload', async (req, res) => {
 
     const file = req.files?.file;
     const path = req.body.path || '';
-    const filename = file.name;
 
     if (!file) {
       return res.status(400).json({
@@ -104,7 +131,7 @@ router.post('/upload', async (req, res) => {
     // Upload ke storage bucket
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('files')
-      .upload(`${req.user.id}/${path}/${filename}`, file.data);
+      .upload(`${req.user.id}/${path}/${file.name}`, file.data);
 
     if (uploadError) {
       throw uploadError;
@@ -113,14 +140,13 @@ router.post('/upload', async (req, res) => {
     // Dapatkan public URL
     const { data: publicUrlData } = await supabase.storage
       .from('files')
-      .getPublicUrl(`${req.user.id}/${path}/${filename}`);
+      .getPublicUrl(`${req.user.id}/${path}/${file.name}`);
 
-    // Simpan data file ke database dengan filename yang valid
+    // Simpan data file ke database
     const { data: fileData, error: insertError } = await supabase
       .from('files')
       .insert({
         user_id: req.user.id,
-        filename: filename,
         original_name: file.name,
         path: path,
         size: file.size,
@@ -871,6 +897,25 @@ function validateFile(file) {
   }
 }
 
+// Modifikasi fungsi untuk mendapatkan preview URL berdasarkan tipe file
+const getPreviewUrl = (file, signedUrl) => {
+  const mimeType = file.mime_type.toLowerCase();
+  
+  // Untuk file PDF, gunakan Google Docs Viewer
+  if (mimeType === 'application/pdf') {
+    return `https://docs.google.com/viewer?url=${encodeURIComponent(signedUrl)}&embedded=true`;
+  }
+  
+  // Untuk file dokumen Microsoft Office
+  if (mimeType.includes('officedocument') || mimeType.includes('msword')) {
+    return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(signedUrl)}`;
+  }
+  
+  // Untuk gambar dan file lainnya, kembalikan URL langsung
+  return signedUrl;
+};
+
+// Modifikasi endpoint preview untuk menangani berbagai tipe file
 router.get('/preview/:id', verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
@@ -878,7 +923,7 @@ router.get('/preview/:id', verifyToken, async (req, res) => {
     
     const { data: file, error } = await supabase
       .from('files')
-      .select('filename, original_name, mime_type, path')
+      .select('*')
       .eq('id', id)
       .eq('user_id', userId)
       .single();
@@ -891,24 +936,21 @@ router.get('/preview/:id', verifyToken, async (req, res) => {
     
     const { data: signedUrlData, error: signedUrlError } = await supabase.storage
       .from('files')
-      .createSignedUrl(filePath, 3600, {
-        download: false,
-        transform: {
-          width: 800,
-          height: 800,
-          resize: 'contain'
-        }
-      });
+      .createSignedUrl(filePath, 3600);
 
     if (signedUrlError) {
       throw signedUrlError;
     }
 
+    const previewUrl = getPreviewUrl(file, signedUrlData.signedUrl);
+
     res.json({
       success: true,
       url: signedUrlData.signedUrl,
+      preview_url: previewUrl,
       filename: file.original_name,
-      mime_type: file.mime_type
+      mime_type: file.mime_type,
+      can_preview: ['application/pdf', 'image/jpeg', 'image/png', 'image/gif'].includes(file.mime_type.toLowerCase())
     });
 
   } catch (error) {
