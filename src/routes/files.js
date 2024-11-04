@@ -92,6 +92,7 @@ router.post('/upload', async (req, res) => {
 
     const file = req.files?.file;
     const path = req.body.path || '';
+    const filename = file.name;
 
     if (!file) {
       return res.status(400).json({
@@ -103,7 +104,7 @@ router.post('/upload', async (req, res) => {
     // Upload ke storage bucket
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('files')
-      .upload(`${req.user.id}/${path}/${file.name}`, file.data);
+      .upload(`${req.user.id}/${path}/${filename}`, file.data);
 
     if (uploadError) {
       throw uploadError;
@@ -112,13 +113,14 @@ router.post('/upload', async (req, res) => {
     // Dapatkan public URL
     const { data: publicUrlData } = await supabase.storage
       .from('files')
-      .getPublicUrl(`${req.user.id}/${path}/${file.name}`);
+      .getPublicUrl(`${req.user.id}/${path}/${filename}`);
 
-    // Simpan data file ke database
+    // Simpan data file ke database dengan filename yang valid
     const { data: fileData, error: insertError } = await supabase
       .from('files')
       .insert({
         user_id: req.user.id,
+        filename: filename,
         original_name: file.name,
         path: path,
         size: file.size,
